@@ -1,0 +1,11 @@
+data/
+scripts/
+logs/
+weights/
+slurm/
+.idea/
+*.tar.gz
+*.zip
+*.pkl
+*.pyc
+.DS_Store
