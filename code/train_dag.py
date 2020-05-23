@@ -1,6 +1,5 @@
 """
-DAGAN: Domain Adaptation GAN for single-source domain adaptation.
-Directly minimizing maximum Mean Discrepancy (MMD), no discriminator D is involved.
+Domain Adaptation as a Problem of Inference on Graphical Models
 """
 from __future__ import print_function
 import sys
@@ -10,32 +9,42 @@ import utils
 import torchvision
 import itertools
 from torch.utils.tensorboard import SummaryWriter
-from trainer import *
 from sklearn.metrics import pairwise_distances
-from os.path import join
 import torch.nn.functional as F
+from dataset_flow import *
+from trainer import *
 
 
 def test_acc(model, test_loader, device):
 
     model.eval()
     with torch.no_grad():
-      test_loss = 0
-      correct = 0
-      for data, target in test_loader:
-        data, target = data.to(device), target.to(device).long()
-        output = model(data)[1]
-        test_loss += F.nll_loss(output, target).sum().item()  # sum up batch loss
-        pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
-        correct += pred.eq(target.view_as(pred)).sum().item()
+        test_loss_ac = 0
+        correct_ac = 0
+        test_loss_tac = 0
+        correct_tac = 0
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device).view(data.size(0), 2)
+            output_ac, output_tac, _, _ = model(data)
+            test_loss_ac += F.nll_loss(output_ac, target[:, 0]).sum().item()  # sum up batch loss
+            pred_ac = output_ac.max(1, keepdim=True)[1]  # get the index of the max log-probability
+            correct_ac += pred_ac.eq(target[:, 0].view_as(pred_ac)).sum().item()
+            test_loss_tac += F.nll_loss(output_tac, target[:, 0]).sum().item()  # sum up batch loss
+            pred_tac = output_tac.max(1, keepdim=True)[1]  # get the index of the max log-probability
+            correct_tac += pred_tac.eq(target[:, 0].view_as(pred_tac)).sum().item()
 
-    test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset) * 1.0))
+    test_loss_ac /= len(test_loader.dataset)
+    test_loss_tac /= len(test_loader.dataset)
+    print('\nTest set ac: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
+        test_loss_ac, correct_ac, len(test_loader.dataset),
+        100. * correct_ac / len(test_loader.dataset) * 1.0))
+    print('\nTest set tac: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
+        test_loss_tac, correct_tac, len(test_loader.dataset),
+        100. * correct_tac / len(test_loader.dataset) * 1.0))
+
     model.train()
 
-    return correct / len(test_loader.dataset)*1.0
+    return correct_ac / len(test_loader.dataset)*1.0, correct_tac / len(test_loader.dataset)*1.0
 
 
 def run(config):
@@ -69,17 +78,15 @@ def run(config):
     num_domain = config['num_domain']
     dim_z = config['dim_z']
 
-    state_dict = {'epoch': 0, 'iterations': 0, 'best_score': 0, 'config': config}
+    state_dict = {'epoch': 0, 'iterations': 0, 'config': config}
 
-    if config['trainer'] == 'ML':
-        trainer = InferML(config)
-    if config['trainer'] == 'Bayesian':
-        trainer = InferBayesian(config)
+    trainer = DA_InferDAG(config)
+    trainer.to(device)
 
     if config['resume']:
         state_dict = utils.resume_state(os.path.join(config['weights_root'], experiment_name))
         trainer.resume(os.path.join(config['weights_root'], experiment_name))
-    trainer.to(device)
+        trainer.to(device)
 
     iterations = state_dict['iterations']
 
@@ -88,29 +95,41 @@ def run(config):
     writer = SummaryWriter(log_folder)
 
     # load datasets
-    dataset_specs = {'class_name': config['source_dataset'], 'seed': config['seed'], 'train': True,
-                        'root': join(config['data_root'], config['source_dataset']), 'num_train': config['num_train'],
-                        'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim_a'],
+    train_dataset_specs = {'class_name': config['dataset'], 'seed': config['seed'], 'train': True,
+                        'root': join(config['data_root'], config['dataset']), 'num_train': config['num_train'],
+                        'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim'],
                         'dim_d': config['dim_d']}
-    train_loader = utils.get_data_loader(dataset_specs, batch_size, config['num_workers'])
+    train_loader = utils.get_data_loader(train_dataset_specs, batch_size, config['num_workers'])
+    test_dataset_specs = {'class_name': config['dataset'], 'seed': config['seed'], 'train': False,
+                     'root': join(config['data_root'], config['dataset']), 'num_train': config['num_train'],
+                     'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim'],
+                     'dim_d': config['dim_d']}
+    test_loader = utils.get_data_loader(test_dataset_specs, batch_size, config['num_workers'])
+
+    # compute pairwise distance for kernel width
     pair_dist = pairwise_distances(train_loader.dataset.data)
     config['base_x'] = np.median(pair_dist)
     if config['is_reg']:
         pair_dist = pairwise_distances(train_loader.dataset.y)
         config['base_y'] = np.median(pair_dist)
 
+    # get sample size in each domain
+    do_ss = torch.zeros((num_domain, 1))
+    for do_i in range(num_domain):
+        do_ss[do_i] = torch.Tensor([(train_loader.dataset.labels[:, 1] == do_i).sum()]).item()
+    config['do_ss'] = do_ss
+
     # training
-    best_score = state_dict['best_score']
     Diters = config['num_D_steps']
     Giters = config['num_G_steps']
     Diter = 0
     Giter = Giters
-    best_score = state_dict['best_score']
     for ep in range(state_dict['epoch'], config['num_epochs']):
         state_dict['epoch'] = ep
-        if config['cuda']:
-            test_acc_target = test_acc(trainer.dis, train_loader, device=device)
-            writer.add_scalar('test_acc_target', test_acc_target, ep)
+
+        test_acc_target_c, test_acc_target_ct = test_acc(trainer.dis, test_loader, device=device)
+        writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
+        writer.add_scalar('test_acc_target_tac', test_acc_target_ct, ep)
 
         for it, (x, y) in enumerate(train_loader):
             if x.size(0) != batch_size:
@@ -138,17 +157,17 @@ def run(config):
             # Dump training stats in log file
             if (iterations + 1) % config['save_every'] == 0:
                 writer.add_scalar('gan_loss', trainer.gan_loss, iterations)
-                writer.add_scalar('aux_loss_c', trainer.aux_loss_c, iterations)
-                writer.add_scalar('aux_loss_c1', trainer.aux_loss_c1, iterations)
+                writer.add_scalar('aux_loss_c_fake', trainer.aux_loss_c, iterations)
+                writer.add_scalar('aux_loss_c_real', trainer.aux_loss_c1, iterations)
                 writer.add_scalar('aux_loss_ct', trainer.aux_loss_ct, iterations)
-                writer.add_scalar('aux_loss_d', trainer.aux_loss_d, iterations)
-                writer.add_scalar('aux_loss_d1', trainer.aux_loss_d1, iterations)
+                writer.add_scalar('aux_loss_d_fake', trainer.aux_loss_d, iterations)
+                writer.add_scalar('aux_loss_d_real', trainer.aux_loss_d1, iterations)
                 writer.add_scalar('aux_loss_dt', trainer.aux_loss_dt, iterations)
 
             if (iterations + 1) % config['display_every'] == 0:
-                print("Iteration: %08d, gan loss: %.2f, ac_fake: %.2f, ac_real: %.2f, ac_twin: %.2f, ad_fake: %.2f, "
+                print("Epoch: %04d, Iteration: %08d, gan loss: %.2f, ac_fake: %.2f, ac_real: %.2f, ac_twin: %.2f, ad_fake: %.2f, "
                       "ad_real: %.2f, ad_twin: %.2f"
-                      % (iterations + 1, trainer.gan_loss, trainer.aux_loss_c, trainer.aux_loss_c1, trainer.aux_loss_ct,
+                      % (ep+1, iterations + 1, trainer.gan_loss, trainer.aux_loss_c, trainer.aux_loss_c1, trainer.aux_loss_ct,
                          trainer.aux_loss_d, trainer.aux_loss_d1, trainer.aux_loss_dt))
 
             # Save network weights
@@ -157,6 +176,11 @@ def run(config):
 
             iterations += 1
             state_dict['iterations'] = iterations
+
+        # print variational parameters
+        if config['trainer'] == 'Bayesian':
+            print(trainer.gen.mu.squeeze())
+            print(trainer.gen.sigma.squeeze())
 
 
 def main():

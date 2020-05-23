@@ -51,26 +51,44 @@ class Linear_Generator(nn.Module):
         return output
 
 
-# a MLP decoder
+# a MLP generator
 class MLP_Generator(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=64, is_reg=False):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=64, is_reg=False, prob=True):
         super(MLP_Generator, self).__init__()
+        self.prob = prob
+        if prob:
+            # VAE posterior parameters, Gaussian
+            self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
+            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
+        else:
+            self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
-        self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.decoder = MLP(num_layer + 2, [z_dim+cl_dim+do_dim] + [num_nodes] + [i_dim])
         self.is_reg = is_reg
 
-    def forward(self, noise, input_c, input_d, device='cpu'):
+    def forward(self, noise, input_c, input_d, noise_d=None):
         if self.is_reg:
             output_c = input_c
         else:
+            input_c = input_c.float()
             output_c = self.lc(input_c)
-        output_d = self.ld(input_d)
+        input_d = input_d.float()
+        if self.prob:
+            theta = self.mu + torch.mul(self.sigma, noise_d)
+            output_d = torch.matmul(input_d, theta)
+        else:
+            output_d = self.ld(input_d)
         output = self.decoder(torch.cat((output_c, output_d, noise), axis=1))
-        return output
+        if self.prob:
+            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            if KL_reg.shape[1] > 1:
+                KL_reg = KL_reg.sum(axis=1)
+            return output, -KL_reg
+        else:
+            return output
 
 
-# a MLP decoder
+# a MLP discriminator
 class MLP_Disriminator(nn.Module):
     def __init__(self, i_dim, cl_num, do_num, num_layer=1, num_nodes=64, is_reg=False):
         super(MLP_Disriminator, self).__init__()

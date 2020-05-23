@@ -9,6 +9,7 @@ import datetime
 import time
 from dataset_simul import *
 from dataset_flow import *
+from dataset_wifi import *
 import torch.nn as nn
 
 
@@ -34,7 +35,7 @@ def prepare_parser():
 
     ### Dataset/Dataloader stuff ###
     parser.add_argument(
-        '--dataset', type=str, default='DataSetFlow5',
+        '--dataset', type=str, default='DatasetFlow5',
         help='Multiple domain data (default: %(default)s)')
     parser.add_argument(
         '--num_workers', type=int, default=1,
@@ -53,7 +54,7 @@ def prepare_parser():
         help='input image size '
              '(default: %(default)s)')
     parser.add_argument(
-        '--idim', type=int, default=4,
+        '--idim', type=int, default=7,
         help='input image channel in the source domain '
              '(default: %(default)s)')
     parser.add_argument(
@@ -63,7 +64,7 @@ def prepare_parser():
         '--mlp_nodes', type=int, default=64,
         help='number of nodes in each MLP hidden layer (default: %(default)s)')
     parser.add_argument(
-        '--dim_z', type=int, default=4,
+        '--dim_z', type=int, default=7,
         help='Noise dimensionality: %(default)s)')
     parser.add_argument(
         '--dim_y', type=int, default=2,
@@ -163,7 +164,7 @@ def prepare_parser():
 
     ### Which train function ###
     parser.add_argument(
-        '--trainer', type=str, default='Infer_ML',
+        '--trainer', type=str, default='ML',
         help='How2trainyourbois (default: %(default)s)')
 
     ### Resume training stuff
@@ -229,9 +230,17 @@ def name_from_config(config):
 
 
 def get_data_loader(conf, batch_size, num_workers):
-    dataset = []
     print("dataset=%s(conf)" % conf['class_name'])
-    exec ("dataset=%s(conf)" % conf['class_name'])
+    if conf['class_name'] == 'DatasetFlow5':
+        dataset = DatasetFlow5(conf)
+    elif conf['class_name'] == 'DatasetWifiMultiTot1':
+        dataset = DatasetWifiMultiTot1(conf)
+    elif conf['class_name'] == 'DatasetWifiMultiTot2':
+        dataset = DatasetWifiMultiTot2(conf)
+    elif conf['class_name'] == 'DatasetWifiMultiTot3':
+        dataset = DatasetWifiMultiTot3(conf)
+    else:
+        dataset = None
     return torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
 

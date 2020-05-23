@@ -24,7 +24,7 @@ class DatasetFlow5(data.Dataset):
         self.test_id = self.num_domain - 1
 
         # extract Markov Blanket
-        x = x[:, [0, 2, 3, 4]]
+        # x = x[:, [0, 2, 3, 4]]
 
         if self.train:
             self.data = x
