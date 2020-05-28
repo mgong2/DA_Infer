@@ -47,24 +47,24 @@ def prepare_parser():
         '--G_model', type=str, default='MLP_Generator',
         help='Name of the model module (default: %(default)s)')
     parser.add_argument(
-        '--D_model', type=str, default='MLP_Discriminator',
+        '--D_model', type=str, default='MLP_Classifier',
         help='Name of the model module (default: %(default)s)')
     parser.add_argument(
         '--resolution', type=int, default=32,
         help='input image size '
              '(default: %(default)s)')
     parser.add_argument(
-        '--idim', type=int, default=7,
+        '--idim', type=int, default=4,
         help='input image channel in the source domain '
              '(default: %(default)s)')
     parser.add_argument(
-        '--mlp_layers', type=int, default=1,
+        '--mlp_layers', type=int, default=4,
         help='number of MLP hidden layers (default: %(default)s)')
     parser.add_argument(
-        '--mlp_nodes', type=int, default=64,
+        '--mlp_nodes', type=int, default=[10, 10, 10, 10],
         help='number of nodes in each MLP hidden layer (default: %(default)s)')
     parser.add_argument(
-        '--dim_z', type=int, default=7,
+        '--dim_z', type=int, default=4,
         help='Noise dimensionality: %(default)s)')
     parser.add_argument(
         '--dim_y', type=int, default=2,
@@ -76,12 +76,18 @@ def prepare_parser():
         '--is_reg', type=bool, default=False,
         help='is regression?: %(default)s)')
     parser.add_argument(
-        '--dag_mat_file', type=str, default='None',
+        '--useMB', type=bool, default=True,
+        help='is regression?: %(default)s)')
+    parser.add_argument(
+        '--dag_mat_file', type=str, default='dag_mat.npz',
         help='DAG matrix file: %(default)s)')
 
     ### Model init stuff ###
     parser.add_argument(
-        '--seed', type=int, default=1,
+        '--tar_id', type=int, default=1,
+        help='target domain id (default: %(default)s)')
+    parser.add_argument(
+        '--seed', type=int, default=0,
         help='Random seed to use; affects both initialization and '
              ' dataloading. (default: %(default)s)')
     parser.add_argument(
@@ -103,15 +109,15 @@ def prepare_parser():
         '--D_B1', type=float, default=0.5,
         help='Beta1 to use for Discriminator (default: %(default)s)')
     parser.add_argument(
-        '--G_B2', type=float, default=0.9,
+        '--G_B2', type=float, default=0.999,
         help='Beta2 to use for Generator (default: %(default)s)')
     parser.add_argument(
-        '--D_B2', type=float, default=0.9,
+        '--D_B2', type=float, default=0.999,
         help='Beta2 to use for Discriminator (default: %(default)s)')
 
     ### Batch size, parallel, and precision stuff ###
     parser.add_argument(
-        '--batch_size', type=int, default=50,
+        '--batch_size', type=int, default=300,
         help='Default overall batchsize (default: %(default)s)')
     parser.add_argument(
         '--num_G_steps', type=int, default=1,
@@ -136,10 +142,14 @@ def prepare_parser():
         help='auxiliary classifier weight '
              '(default: %(default)s)')
     parser.add_argument(
-        '--display_every', type=int, default=100,
+        '--TAR_weight', type=float, default=0.1,
+        help='target domain classifier weight '
+             '(default: %(default)s)')
+    parser.add_argument(
+        '--display_every', type=int, default=10,
         help='display every X iterations (default: %(default)s)')
     parser.add_argument(
-        '--save_every', type=int, default=100,
+        '--save_every', type=int, default=10,
         help='Save every X iterations (default: %(default)s)')
     parser.add_argument(
         '--base_root', type=str, default='..',
@@ -164,8 +174,11 @@ def prepare_parser():
 
     ### Which train function ###
     parser.add_argument(
-        '--trainer', type=str, default='ML',
-        help='How2trainyourbois (default: %(default)s)')
+        '--trainer', type=str, default='DA_Infer_JMMD',
+        help='train functions (default: %(default)s)')
+    parser.add_argument(
+        '--estimate', type=str, default='ML',
+        help='ML/Bayesian estimate (default: %(default)s)')
 
     ### Resume training stuff
     parser.add_argument(
@@ -213,10 +226,14 @@ def name_from_config(config):
         item for item in [
             config['dataset'] + '/',
             'AC_weight%3.2f' % config['AC_weight'],
-            '%s' % config['trainer'],
+            'TAR_weight%3.2f' % config['TAR_weight'],
+            '%s' % config['estimate'],
             'nDs%d' % config['num_D_steps'],
             config['G_model'],
             config['D_model'],
+            config['trainer'],
+            'tarId%d' % config['tar_id'],
+            'mlp_nodes%d' % config['mlp_nodes'][0],
             'seed%d' % config['seed'],
             'bs%d' % config['batch_size'],
             'Glr%2.1e' % config['G_lr'],
@@ -233,12 +250,8 @@ def get_data_loader(conf, batch_size, num_workers):
     print("dataset=%s(conf)" % conf['class_name'])
     if conf['class_name'] == 'DatasetFlow5':
         dataset = DatasetFlow5(conf)
-    elif conf['class_name'] == 'DatasetWifiMultiTot1':
-        dataset = DatasetWifiMultiTot1(conf)
-    elif conf['class_name'] == 'DatasetWifiMultiTot2':
-        dataset = DatasetWifiMultiTot2(conf)
-    elif conf['class_name'] == 'DatasetWifiMultiTot3':
-        dataset = DatasetWifiMultiTot3(conf)
+    elif conf['class_name'] == 'DatasetWifi':
+        dataset = DatasetWifi(conf)
     else:
         dataset = None
     return torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)

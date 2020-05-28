@@ -53,7 +53,7 @@ class Linear_Generator(nn.Module):
 
 # a MLP generator
 class MLP_Generator(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=64, is_reg=False, prob=True):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=[64], is_reg=False, prob=True):
         super(MLP_Generator, self).__init__()
         self.prob = prob
         if prob:
@@ -63,7 +63,7 @@ class MLP_Generator(nn.Module):
         else:
             self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
-        self.decoder = MLP(num_layer + 2, [z_dim+cl_dim+do_dim] + [num_nodes] + [i_dim])
+        self.decoder = MLP(num_layer + 2, [z_dim+cl_dim+do_dim] + num_nodes + [i_dim])
         self.is_reg = is_reg
 
     def forward(self, noise, input_c, input_d, noise_d=None):
@@ -88,27 +88,84 @@ class MLP_Generator(nn.Module):
             return output
 
 
-# a MLP discriminator
-class MLP_Disriminator(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, num_layer=1, num_nodes=64, is_reg=False):
-        super(MLP_Disriminator, self).__init__()
-        self.common_net = MLP(num_layer + 1, [i_dim, num_nodes], relu_final=True)
+# a MLP auxiliary classifier, shared auxiliary classifiers
+class MLP_AuxClassifier(nn.Module):
+    def __init__(self, i_dim, cl_num, do_num, num_layer=1, num_nodes=[64], is_reg=False):
+        super(MLP_AuxClassifier, self).__init__()
+        self.common_net = MLP(num_layer + 1, [i_dim] + num_nodes, relu_final=True)
         if is_reg:
-            self.aux_c = nn.Linear(num_nodes, 1)
-            self.aux_c_tw = nn.Linear(num_nodes, 1)
+            self.aux_c = nn.Linear(num_nodes[-1], 1)
+            self.aux_c_tw = nn.Linear(num_nodes[-1], 1)
         else:
-            self.aux_c = nn.Linear(num_nodes, cl_num)
-            self.aux_c_tw = nn.Linear(num_nodes, cl_num)
-        self.aux_d = nn.Linear(num_nodes, do_num)
-        self.aux_d_tw = nn.Linear(num_nodes, do_num)
+            self.aux_c = nn.Linear(num_nodes[-1], cl_num)
+            self.aux_c_tw = nn.Linear(num_nodes[-1], cl_num)
+        self.aux_d = nn.Linear(num_nodes[-1], do_num)
+        self.aux_d_tw = nn.Linear(num_nodes[-1], do_num)
+        self.cls = MLP(num_layer + 2, [i_dim] + num_nodes +[cl_num])
 
-    def forward(self, input):
-        input = self.common_net(input)
+    def forward(self, input0):
+        input = self.common_net(input0)
         output_c = self.aux_c(input)
         output_c_tw = self.aux_c_tw(input)
         output_d = self.aux_d(input)
         output_d_tw = self.aux_d_tw(input)
-        return output_c, output_c_tw, output_d, output_d_tw
+        output_cls = self.cls(input0)
+        return output_c, output_c_tw, output_d, output_d_tw, output_cls
+
+
+# # a MLP auxiliary classifier, older version (separate classifier for each domain)
+# class MLP_AuxClassifier(nn.Module):
+#     def __init__(self, i_dim, cl_num, do_num, do_dim, num_layer=1, num_nodes=[64], is_reg=False):
+#         super(MLP_AuxClassifier, self).__init__()
+#         self.do_num = do_num
+#         self.cl_num = cl_num
+#         self.common_dnet = MLP(num_layer + 1, [i_dim] + num_nodes, relu_final=True)
+#         self.aux_d = nn.Linear(num_nodes[-1], do_num)
+#         self.aux_d_tw = nn.Linear(num_nodes[-1], do_num)
+#
+#         self.common_cnet = nn.ModuleList()
+#         self.aux_c = nn.ModuleList()
+#         self.aux_c_tw = nn.ModuleList()
+#         for i in range(do_num):
+#             self.common_cnet.append(MLP(num_layer + 1, [i_dim] + num_nodes, relu_final=True))
+#             self.aux_c.append(nn.Linear(num_nodes[-1], cl_num))
+#             self.aux_c_tw.append(nn.Linear(num_nodes[-1], cl_num))
+#
+#         self.aux_c_minCh = MLP(num_layer + 2, [i_dim] + num_nodes + [cl_num])
+#
+#     def forward(self, input_x, input_d, device='cpu'):
+#         common_d = self.common_dnet(input_x)
+#         output_d = self.aux_d(common_d)
+#         output_d_tw = self.aux_d_tw(common_d)
+#         output_c = torch.zeros(input_x.size(0), self.cl_num, device=device)
+#         output_c_tw = torch.zeros(input_x.size(0), self.cl_num, device=device)
+#         for i in range(self.do_num):
+#             id_i = (input_d == i)
+#             common_c = self.common_cnet[i](input_x[id_i])
+#             output_c[id_i] = self.aux_c[i](common_c)
+#             output_c_tw[id_i] = self.aux_c_tw[i](common_c)
+#
+#         return output_c, output_c_tw, output_d, output_d_tw
+#
+#     def forward_minCh(self, input):
+#         output_c = self.aux_c_minCh(input)
+#         return output_c
+#
+#     def forward_test(self, input):
+#         inputs_c = self.common_cnet[self.do_num-1](input)
+#         output_c = self.aux_c[self.do_num-1](inputs_c)
+#         return output_c
+
+
+# a MLP classifier
+class MLP_Classifier(nn.Module):
+    def __init__(self, i_dim, cl_num, num_layer=1, num_nodes=[64]):
+        super(MLP_Classifier, self).__init__()
+        self.net = MLP(num_layer + 2, [i_dim] + num_nodes +[cl_num])
+
+    def forward(self, input):
+        output_c = self.net(input)
+        return output_c
 
 
 # The graph nodes.
@@ -173,7 +230,7 @@ class Graph:
 
 # a decoder according to a DAG
 class DAG_Generator(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=64, is_reg=False, dagMat=None):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=[64], is_reg=False, dagMat=None, prob=True):
         super(DAG_Generator, self).__init__()
         # create a dag
         dag = Graph(i_dim)
@@ -190,11 +247,20 @@ class DAG_Generator(nn.Module):
         # topological sort
         nodeSort = dag.topologicalSort()
         numInput = dagMat.sum(1)
-        self.cnet = nn.Linear(cl_num, cl_dim * i_dim, bias=False)
-        self.dnet = nn.Linear(do_num, do_dim * i_dim, bias=False)
-        nets = nn.ModuleList()
 
-        # construct network according to the dag
+        # define class and domain conditional networks
+        self.prob = prob
+        if prob:
+            # VAE posterior parameters, Gaussian
+            self.mu = nn.Parameter(torch.zeros(do_num, do_dim * i_dim))
+            self.sigma = nn.Parameter(torch.ones(do_num, do_dim * i_dim))
+        else:
+            self.dnet = nn.Linear(do_num, do_dim * i_dim, bias=False)
+        if not is_reg:
+            self.cnet = nn.Linear(cl_num, cl_dim * i_dim, bias=False)
+
+        # construct generative network according to the dag
+        nets = nn.ModuleList()
         for i in range(i_dim):
             num_nodesIn = int(numInput[i]) + cl_dim + do_dim + z_dim
             num_nodes_i = [num_nodesIn] + num_nodes + [1]
@@ -208,28 +274,31 @@ class DAG_Generator(nn.Module):
         self.i_dim = i_dim
         self.i_dimNew = i_dim
         self.do_num = do_num
-        if cl_num > 1:
-            self.cl_num = cl_num
-        else:
-            self.cl_num = cl_dim
+        self.cl_num = cl_num
         self.cl_dim = cl_dim
         self.do_dim = do_dim
         self.z_dim = z_dim
         self.dagMat = dagMat
         self.numInput = numInput
-        self.ischain = False
         self.is_reg = is_reg
+        self.ischain = False
 
         # inputs: class indicator, domain indicator, noise, features
         # separate forward for each factor
-    def forward(self, noise, input_c, input_d, input_x, device='cpu'):
+    def forward_indep(self, noise, input_c, input_d, input_x, noise_d=None, device='cpu'):
         # class parameter network
         batch_size = input_c.size(0)
         if self.is_reg:
             inputs_c = input_c.view(batch_size, 1)
         else:
-            inputs_c = self.cnet(input_c)
-        inputs_d = self.dnet(input_d)
+            inputs_c = self.cnet(input_c.float())
+        input_d = input_d.float()
+        if self.prob:
+            theta = self.mu + torch.mul(self.sigma, noise_d)
+            inputs_d = torch.matmul(input_d, theta)
+        else:
+            inputs_d = self.dnet(input_d)
+
         inputs_n = noise
         inputs_f = input_x
 
@@ -257,26 +326,35 @@ class DAG_Generator(nn.Module):
                 inputs_i = torch.cat((inputs_ci, inputs_di, inputs_ni), 1)
 
             output[:, i] = self.nets[i](inputs_i).squeeze()
-        return output
+
+        if self.prob:
+            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            if KL_reg.shape[1] > 1:
+                KL_reg = KL_reg.sum(axis=1)
+            return output, -KL_reg
+        else:
+            return output
 
     # inputs: class indicator, domain indicator, noise
     # forward for all factors in a graph
-    def forward_all(self, noise, input_c, input_d, device='cpu'):
+    def forward(self, noise, input_c, input_d, device='cpu', noise_d=None):
         # class parameter network
         batch_size = input_c.size(0)
-
         if self.is_reg:
             inputs_c = input_c.view(batch_size, 1)
         else:
-            inputs_c = self.cnet(input_c)
-        inputs_d = self.dnet(input_d)
+            inputs_c = self.cnet(input_c.float())
+        input_d = input_d.float()
+        if self.prob:
+            theta = self.mu + torch.mul(self.sigma, noise_d)
+            inputs_d = torch.matmul(input_d, theta)
+        else:
+            inputs_d = self.dnet(input_d)
+
         inputs_n = noise
 
         output = torch.zeros((batch_size, len(self.nodeSort)))
         output = output.to(device)
-
-        # output_tmp = torch.zeros((batch_size, len(self.nodeSort)))
-        # output_tmp = output_tmp.cuda()
 
         # create a network for each module
         for i in self.nodeSort:
@@ -285,7 +363,6 @@ class DAG_Generator(nn.Module):
                 index = np.argwhere(self.dagMat[i, :])
                 index = index.flatten()
                 index = [int(j) for j in index]
-                # inputs_p = output_tmp[:, index]
                 inputs_p = output[:, index]
 
             if not self.is_reg:
@@ -300,13 +377,13 @@ class DAG_Generator(nn.Module):
                 inputs_i = torch.cat((inputs_ci, inputs_di, inputs_ni), 1)
 
             output[:, i] = self.nets[i](inputs_i).squeeze()
-            # output_tmp[:, i] = output[:, i]
+
         return output
 
 
 # a decoder according to a partial DAG
 class PDAG_Generator(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=64, is_reg=False, dagMat=None):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=[64], is_reg=False, dagMat=None, prob=True):
         super(PDAG_Generator, self).__init__()
 
         # find undirected groups of variables
@@ -374,10 +451,19 @@ class PDAG_Generator(nn.Module):
         # topological sort
         nodeSort = dag.topologicalSort()
         numInput = dagMatNew.sum(1)
-        self.cnet = nn.Linear(cl_num, cl_dim * i_dim, bias=False) # need to fix the dimension to cl_dim*i_dimNew
-        self.dnet = nn.Linear(do_num, do_dim * i_dimNew, bias=False)
-        nets = nn.ModuleList()
 
+        # define class and domain conditional networks
+        self.prob = prob
+        if prob:
+            # VAE posterior parameters, Gaussian
+            self.mu = nn.Parameter(torch.zeros(do_num, do_dim * i_dimNew))
+            self.sigma = nn.Parameter(torch.ones(do_num, do_dim * i_dimNew))
+        else:
+            self.dnet = nn.Linear(do_num, do_dim * i_dimNew, bias=False)
+        if not is_reg:
+            self.cnet = nn.Linear(cl_num, cl_dim * i_dimNew, bias=False) # need to fix the dimension to cl_dim*i_dimNew
+
+        nets = nn.ModuleList()
         dimNoise = np.zeros(i_dimNew, dtype=int)
         for i in range(i_dimNew):
             num_nodesIn = int(numInput[i]) + cl_dim + do_dim + z_dim * len(nodesA[i])
@@ -390,10 +476,7 @@ class PDAG_Generator(nn.Module):
         self.nodeSort = nodeSort
         self.i_dim = i_dim
         self.i_dimNew = i_dimNew
-        if cl_num > 1:
-            self.cl_num = cl_num
-        else:
-            self.cl_num = cl_dim
+        self.cl_num = cl_num
         self.do_num = do_num
         self.cl_dim = cl_dim
         self.do_dim = do_dim
@@ -407,14 +490,20 @@ class PDAG_Generator(nn.Module):
         self.is_reg = is_reg
 
     # input: class indicator, domain indicator, noise, inputs, separate learning of modules
-    def forward(self, noise, input_c, input_d, input_x, device='cpu'):
+    def forward_indep(self, noise, input_c, input_d, input_x,  device='cpu', noise_d=None):
         # class parameter network
         batch_size = input_c.size(0)
         if self.is_reg:
             inputs_c = input_c.view(batch_size, 1)
         else:
-            inputs_c = self.cnet(input_c)
-        inputs_d = self.dnet(input_d)
+            inputs_c = self.cnet(input_c.float())
+        input_d = input_d.float()
+        if self.prob:
+            theta = self.mu + torch.mul(self.sigma, noise_d)
+            inputs_d = torch.matmul(input_d, theta)
+        else:
+            inputs_d = self.dnet(input_d)
+
         inputs_n = noise
         inputs_f = input_x
 
@@ -429,7 +518,6 @@ class PDAG_Generator(nn.Module):
                     index = index.flatten()
                     index = [int(j) for j in index]
                     input_p = inputs_f[:, index]
-                    # input_p = Variable(input_p.data.contiguous().view(batchSize, 1))
                 else:
                     index = np.argwhere(self.dagMatNew[i, :])
                     index = index.flatten()
@@ -437,7 +525,6 @@ class PDAG_Generator(nn.Module):
                     index = list(itertools.chain.from_iterable(index))
                     index = [int(j) for j in index]
                     input_p = inputs_f[:, index]
-                    # input_p = Variable(input_p.data.contiguous().view(batchSize, 1))
 
             if not self.is_reg:
                 input_ci = inputs_c[:, i * self.cl_dim:(i + 1) * self.cl_dim]
@@ -451,23 +538,33 @@ class PDAG_Generator(nn.Module):
                 input_i = torch.cat((input_ci, input_di, input_ni), 1)
 
             output[:, self.nodesA[i]] = self.nets[i](input_i)
-
-        return output
+        if self.prob:
+            KL_reg = 1 + torch.log(self.sigma ** 2) - self.mu ** 2 - self.sigma ** 2
+            if KL_reg.shape[1] > 1:
+                KL_reg = KL_reg.sum(axis=1)
+            return output, -KL_reg
+        else:
+            return output
 
     # input: class indicator, domain indicator, noise, joint learning of modules
-    def forward_all(self, noise, input_c, input_d, device='cpu'):
+    def forward(self, noise, input_c, input_d, device='cpu', noise_d=None):
         # class parameter network
         batch_size = input_c.size(0)
 
         if self.is_reg:
             inputs_c = input_c.view(batch_size, 1)
         else:
-            inputs_c = self.cnet(input_c)
-        inputs_d = self.dnet(input_d)
+            inputs_c = self.cnet(input_c.float())
+        input_d = input_d.float()
+        if self.prob:
+            theta = self.mu + torch.mul(self.sigma, noise_d)
+            inputs_d = torch.matmul(input_d, theta)
+        else:
+            inputs_d = self.dnet(input_d)
+
         inputs_n = noise
 
         output = torch.zeros((batch_size, self.i_dim)).to(device)
-        # output1 = torch.zeros((batch_size, self.i_dim)).cuda()
 
         # create a network for each module
         for i in self.nodeSort:
@@ -478,7 +575,6 @@ class PDAG_Generator(nn.Module):
                     index = index.flatten()
                     index = [int(j) for j in index]
                     input_p = output[:, index]
-                    # input_p = Variable(input_p.data.contiguous().view(batchSize, 1))
                 else:
                     index = np.argwhere(self.dagMatNew[i, :])
                     index = index.flatten()
@@ -486,7 +582,6 @@ class PDAG_Generator(nn.Module):
                     index = list(itertools.chain.from_iterable(index))
                     index = [int(j) for j in index]
                     input_p = output[:, index]
-                    # input_p = Variable(input_p.data.contiguous().view(batchSize, 1))
 
             if not self.is_reg:
                 input_ci = inputs_c[:, i * self.cl_dim:(i + 1) * self.cl_dim]
@@ -500,7 +595,6 @@ class PDAG_Generator(nn.Module):
                 input_i = torch.cat((input_ci, input_di, input_ni), 1)
 
             output[:, self.nodesA[i]] = self.nets[i](input_i)
-            # output1[:, self.nodesA[i]] = output[:, self.nodesA[i]]
 
         return output
 

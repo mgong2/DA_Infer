@@ -15,7 +15,9 @@ class DatasetFlow5(data.Dataset):
         self.train = specs['train']
         self.num_domain = specs['num_domain']
         self.seed = specs['seed']
-        # dag_mat = np.load(specs['dag_mat_file'])
+        self.useMB = specs['useMB']
+        dagFile = np.load(join(self.root, specs['dag_mat_file']))
+        MB = dagFile['MB']
         full_path = join(self.root, 'unnorm_balanced', 'flow_'+str(self.seed)+'_'+str(self.num_train)+'_neqy_unnorm.npz')
         npzfile = np.load(full_path)
         x = npzfile['x']
@@ -24,7 +26,8 @@ class DatasetFlow5(data.Dataset):
         self.test_id = self.num_domain - 1
 
         # extract Markov Blanket
-        # x = x[:, [0, 2, 3, 4]]
+        if self.useMB:
+            x = x[:, MB]
 
         if self.train:
             self.data = x

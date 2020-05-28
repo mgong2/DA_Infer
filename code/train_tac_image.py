@@ -1,5 +1,5 @@
 """
-Domain Adaptation as a Problem of Inference on Graphical Models
+Domain Adaptation as a Problem of Inference on Graphical Models y->X
 """
 from __future__ import print_function
 import sys
@@ -80,8 +80,8 @@ def run(config):
 
     state_dict = {'epoch': 0, 'iterations': 0, 'config': config}
 
-    trainer = DA_Infer(config)
-    trainer.to(device)
+    if config['trainer'] == 'DA_Infer_TAC':
+        trainer = DA_Infer_TAC(config).to(device)
 
     if config['resume']:
         state_dict = utils.resume_state(os.path.join(config['weights_root'], experiment_name))
@@ -96,14 +96,14 @@ def run(config):
 
     # load datasets
     train_dataset_specs = {'class_name': config['dataset'], 'seed': config['seed'], 'train': True,
-                        'root': join(config['data_root'], config['dataset']), 'num_train': config['num_train'],
-                        'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim'],
-                        'dim_d': config['dim_d']}
+                            'root': join(config['data_root'], config['dataset']), 'num_train': config['num_train'],
+                            'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim'],
+                            'dim_d': config['dim_d']}
     train_loader = utils.get_data_loader(train_dataset_specs, batch_size, config['num_workers'])
     test_dataset_specs = {'class_name': config['dataset'], 'seed': config['seed'], 'train': False,
-                     'root': join(config['data_root'], config['dataset']), 'num_train': config['num_train'],
-                     'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim'],
-                     'dim_d': config['dim_d']}
+                            'root': join(config['data_root'], config['dataset']), 'num_train': config['num_train'],
+                            'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim'],
+                            'dim_d': config['dim_d']}
     test_loader = utils.get_data_loader(test_dataset_specs, batch_size, config['num_workers'])
 
     # compute pairwise distance for kernel width
@@ -127,9 +127,9 @@ def run(config):
     for ep in range(state_dict['epoch'], config['num_epochs']):
         state_dict['epoch'] = ep
 
-        # test_acc_target_c, test_acc_target_ct = test_acc(trainer.dis, test_loader, device=device)
-        # writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
-        # writer.add_scalar('test_acc_target_tac', test_acc_target_ct, ep)
+        test_acc_target_c, test_acc_target_ct = test_acc(trainer.dis, test_loader, device=device)
+        writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
+        writer.add_scalar('test_acc_target_tac', test_acc_target_ct, ep)
 
         for it, (x, y) in enumerate(train_loader):
             if x.size(0) != batch_size:
