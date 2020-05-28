@@ -70,9 +70,9 @@ class MLP_Generator(nn.Module):
         if self.is_reg:
             output_c = input_c
         else:
-            input_c = input_c.float()
+            input_c = input_c
             output_c = self.lc(input_c)
-        input_d = input_d.float()
+        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d)
             output_d = torch.matmul(input_d, theta)
@@ -291,8 +291,8 @@ class DAG_Generator(nn.Module):
         if self.is_reg:
             inputs_c = input_c.view(batch_size, 1)
         else:
-            inputs_c = self.cnet(input_c.float())
-        input_d = input_d.float()
+            inputs_c = self.cnet(input_c)
+        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d)
             inputs_d = torch.matmul(input_d, theta)
@@ -343,8 +343,8 @@ class DAG_Generator(nn.Module):
         if self.is_reg:
             inputs_c = input_c.view(batch_size, 1)
         else:
-            inputs_c = self.cnet(input_c.float())
-        input_d = input_d.float()
+            inputs_c = self.cnet(input_c)
+        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d)
             inputs_d = torch.matmul(input_d, theta)
@@ -496,8 +496,8 @@ class PDAG_Generator(nn.Module):
         if self.is_reg:
             inputs_c = input_c.view(batch_size, 1)
         else:
-            inputs_c = self.cnet(input_c.float())
-        input_d = input_d.float()
+            inputs_c = self.cnet(input_c)
+        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d)
             inputs_d = torch.matmul(input_d, theta)
@@ -554,8 +554,8 @@ class PDAG_Generator(nn.Module):
         if self.is_reg:
             inputs_c = input_c.view(batch_size, 1)
         else:
-            inputs_c = self.cnet(input_c.float())
-        input_d = input_d.float()
+            inputs_c = self.cnet(input_c)
+        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d)
             inputs_d = torch.matmul(input_d, theta)

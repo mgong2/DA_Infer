@@ -118,8 +118,8 @@ class DA_Infer_TAC(object):
         noise = torch.randn(batch_size, dim_hidden).to(device)
 
         # create domain labels
-        y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class)
-        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain)
+        y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class).float()
+        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain).float()
 
         if config['estimate'] == 'ML':
             fake_x_a = self.gen(noise, y_a_onehot, d_onehot)
@@ -173,8 +173,8 @@ class DA_Infer_TAC(object):
         noise = torch.randn(batch_size, dim_hidden).to(device)
 
         # create domain labels
-        y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class)
-        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain)
+        y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class).float()
+        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain).float()
 
         with torch.no_grad():
             if config['estimate'] == 'ML':
@@ -284,10 +284,10 @@ class DA_Infer_JMMD(object):
 
         # create domain labels
         if not is_reg:
-            y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class)
+            y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class).float()
         else:
             y_a_onehot = y_a[:, 0].view(batch_size, 1)
-        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain)
+        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain).float()
 
         if config['estimate'] == 'ML':
             fake_x_a = self.gen(noise, y_a_onehot, d_onehot)
@@ -425,11 +425,11 @@ class DA_Infer_JMMD_DAG(object):
 
         # create domain labels
         if not is_reg:
-            y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class)
+            y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class).float()
         else:
             y_a_onehot = y_a[:, 0].view(batch_size, 1)
 
-        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain)
+        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain).float()
 
         if config['estimate'] == 'ML':
             fake_x_a = self.gen.forward_indep(noise, y_a_onehot, d_onehot, x_a, device=device)
