@@ -25,7 +25,7 @@ def prepare_parser():
         '--num_workers', type=int, default=1,
         help='Number of dataloader workers; consider using less for HDF5 '
              '(default: %(default)s)')
-    parser.add_argument('--cuda', action='store_true', default=False,
+    parser.add_argument('--cuda', type=bool, default=False,
         help='Using cuda (default: %(default)s)')
     parser.add_argument(
         '--num_class', type=int, default=2,
@@ -231,7 +231,7 @@ def name_from_config(config):
             config['D_model'],
             config['trainer'],
             'tarId%d' % config['tar_id'],
-            'mlp_nodes%d' % config['mlp_nodes'][0],
+            'mlp_nodes%d' % config['mlp_nodes'],
             'seed%d' % config['seed'],
             'bs%d' % config['batch_size'],
             'Glr%2.1e' % config['G_lr'],
