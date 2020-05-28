@@ -148,7 +148,7 @@ class DA_Infer_TAC(object):
         if config['estimate'] == 'ML':
             errG = gan_loss + lambda_c * (aux_loss_c - aux_loss_ct + lambda_tar * aux_loss_cls + aux_loss_d - aux_loss_dt)
         elif config['estimate'] == 'Bayesian':
-            errG = gan_loss + lambda_c * (aux_loss_c - aux_loss_ct + lambda_tar * aux_loss_cls + aux_loss_d - aux_loss_dt) + torch.dot(1.0/do_ss.squeeze(), KL_reg.squeeze())
+            errG = gan_loss + lambda_c * (aux_loss_c - aux_loss_ct + lambda_tar * aux_loss_cls + aux_loss_d - aux_loss_dt) + torch.dot(1.0/do_ss.to(device).squeeze(), KL_reg.squeeze())
 
         errG.backward()
         self.gen_opt.step()
@@ -325,7 +325,7 @@ class DA_Infer_JMMD(object):
         if config['estimate'] == 'ML':
             errG = errG_s + errG_t + lambda_c * aux_loss_c
         elif config['estimate'] == 'Bayesian':
-            errG = errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.squeeze(), KL_reg.squeeze())
+            errG = errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze())
 
         errG.backward()
         self.gen_opt.step()
@@ -522,7 +522,7 @@ class DA_Infer_JMMD_DAG(object):
         if config['estimate'] == 'ML':
             errG = errG_s + errG_t + lambda_c * aux_loss_c
         elif config['estimate'] == 'Bayesian':
-            errG = errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.squeeze(), KL_reg.squeeze())
+            errG = errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze())
 
         errG.backward()
         self.gen_opt.step()
