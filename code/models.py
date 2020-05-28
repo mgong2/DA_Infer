@@ -499,7 +499,7 @@ class PDAG_Generator(nn.Module):
             inputs_c = self.cnet(input_c)
         input_d = input_d
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
+            theta = self.mu + torch.mul(self.sigma, noise_d[:, :self.i_dimNew * self.do_dim])
             inputs_d = torch.matmul(input_d, theta)
         else:
             inputs_d = self.dnet(input_d)
@@ -557,7 +557,8 @@ class PDAG_Generator(nn.Module):
             inputs_c = self.cnet(input_c)
         input_d = input_d
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
+            # theta = self.mu + torch.mul(self.sigma, noise_d)
+            theta = self.mu + torch.mul(self.sigma, noise_d[:, :self.i_dimNew * self.do_dim])
             inputs_d = torch.matmul(input_d, theta)
         else:
             inputs_d = self.dnet(input_d)
