@@ -77,6 +77,7 @@ class DA_Infer_TAC(object):
         if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'Bayesian':
             self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
                                      num_nodes, is_reg, prob=True)
+        utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_AuxClassifier':
             self.dis = MLP_AuxClassifier(input_dim, num_class, num_domain, num_layer, num_nodes, is_reg)
 
@@ -381,6 +382,8 @@ class DA_Infer_JMMD_DAG(object):
         if config['G_model'] == 'PDAG_Generator' and config['estimate'] == 'Bayesian':
             self.gen = PDAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
                                      num_nodes, is_reg, dag_mat, prob=True)
+
+        utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_Classifier':
             self.dis = MLP_Classifier(input_dim, num_class, num_layer, num_nodes)
 

@@ -17,7 +17,14 @@ def prepare_parser():
     usage = 'Parser for all scripts.'
     parser = ArgumentParser(description=usage)
 
-    ### stuff for domain adaptation
+    ### Dataset/Dataloader stuff ###
+    parser.add_argument(
+        '--dataset', type=str, default='DatasetFlow5',
+        help='Multiple domain data (default: %(default)s)')
+    parser.add_argument(
+        '--num_workers', type=int, default=1,
+        help='Number of dataloader workers; consider using less for HDF5 '
+             '(default: %(default)s)')
     parser.add_argument('--cuda', action='store_true', default=False,
         help='Using cuda (default: %(default)s)')
     parser.add_argument(
@@ -32,14 +39,40 @@ def prepare_parser():
         '--num_train', type=int, default=500,
         help='Number of training examples in simulated data'
              '(default: %(default)s)')
+    parser.add_argument(
+        '--tar_id', type=int, default=1,
+        help='target domain id (default: %(default)s)')
+    parser.add_argument(
+        '--seed', type=int, default=0,
+        help='Random seed to use; affects both initialization and '
+             ' dataloading. (default: %(default)s)')
+    parser.add_argument(
+        '--resolution', type=int, default=32,
+        help='input image size '
+             '(default: %(default)s)')
+    parser.add_argument(
+        '--idim', type=int, default=4,
+        help='input image channel in the source domain '
+             '(default: %(default)s)')
 
-    ### Dataset/Dataloader stuff ###
+    ### train function, hyperparameters ###
     parser.add_argument(
-        '--dataset', type=str, default='DatasetFlow5',
-        help='Multiple domain data (default: %(default)s)')
+        '--trainer', type=str, default='DA_Infer_JMMD',
+        help='train functions (default: %(default)s)')
     parser.add_argument(
-        '--num_workers', type=int, default=1,
-        help='Number of dataloader workers; consider using less for HDF5 '
+        '--estimate', type=str, default='ML',
+        help='ML/Bayesian estimate (default: %(default)s)')
+    parser.add_argument(
+        '--gan_loss', type=str, default='mmd',
+        help='Default location to store all weights, samples, data, and logs '
+             ' (default: %(default)s)')
+    parser.add_argument(
+        '--AC_weight', type=float, default=1.0,
+        help='auxiliary classifier weight '
+             '(default: %(default)s)')
+    parser.add_argument(
+        '--TAR_weight', type=float, default=0.1,
+        help='target domain classifier weight '
              '(default: %(default)s)')
 
     ### Model stuff ###
@@ -49,14 +82,6 @@ def prepare_parser():
     parser.add_argument(
         '--D_model', type=str, default='MLP_Classifier',
         help='Name of the model module (default: %(default)s)')
-    parser.add_argument(
-        '--resolution', type=int, default=32,
-        help='input image size '
-             '(default: %(default)s)')
-    parser.add_argument(
-        '--idim', type=int, default=4,
-        help='input image channel in the source domain '
-             '(default: %(default)s)')
     parser.add_argument(
         '--mlp_layers', type=int, default=4,
         help='number of MLP hidden layers (default: %(default)s)')
@@ -83,13 +108,6 @@ def prepare_parser():
         help='DAG matrix file: %(default)s)')
 
     ### Model init stuff ###
-    parser.add_argument(
-        '--tar_id', type=int, default=1,
-        help='target domain id (default: %(default)s)')
-    parser.add_argument(
-        '--seed', type=int, default=0,
-        help='Random seed to use; affects both initialization and '
-             ' dataloading. (default: %(default)s)')
     parser.add_argument(
         '--skip_init', action='store_true', default=False,
         help='Skip initialization, ideal for testing when ortho init was used '
@@ -134,18 +152,6 @@ def prepare_parser():
 
     ### Bookkeping stuff ###
     parser.add_argument(
-        '--gan_loss', type=str, default='mmd',
-        help='Default location to store all weights, samples, data, and logs '
-             ' (default: %(default)s)')
-    parser.add_argument(
-        '--AC_weight', type=float, default=1.0,
-        help='auxiliary classifier weight '
-             '(default: %(default)s)')
-    parser.add_argument(
-        '--TAR_weight', type=float, default=0.1,
-        help='target domain classifier weight '
-             '(default: %(default)s)')
-    parser.add_argument(
         '--display_every', type=int, default=10,
         help='display every X iterations (default: %(default)s)')
     parser.add_argument(
@@ -171,14 +177,6 @@ def prepare_parser():
         '--experiment_name', type=str, default='',
         help='Optionally override the automatic experiment naming with this arg. '
              '(default: %(default)s)')
-
-    ### Which train function ###
-    parser.add_argument(
-        '--trainer', type=str, default='DA_Infer_JMMD',
-        help='train functions (default: %(default)s)')
-    parser.add_argument(
-        '--estimate', type=str, default='ML',
-        help='ML/Bayesian estimate (default: %(default)s)')
 
     ### Resume training stuff
     parser.add_argument(

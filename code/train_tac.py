@@ -25,26 +25,28 @@ def test_acc(model, test_loader, device):
         correct_tac = 0
         for data, target in test_loader:
             data, target = data.to(device), target.to(device).view(data.size(0), 2)
-            output_tac, _, _, _, output_ac = model(data) # output_tac is actually output_cls !!
+            # output_tac, _, _, _, output_ac = model(data) # output_tac is actually output_cls !!
+            _, _, _, _, output_ac = model(data) # output_tac is actually output_cls !!
             test_loss_ac += F.nll_loss(output_ac, target[:, 0]).sum().item()  # sum up batch loss
             pred_ac = output_ac.max(1, keepdim=True)[1]  # get the index of the max log-probability
             correct_ac += pred_ac.eq(target[:, 0].view_as(pred_ac)).sum().item()
-            test_loss_tac += F.nll_loss(output_tac, target[:, 0]).sum().item()  # sum up batch loss
-            pred_tac = output_tac.max(1, keepdim=True)[1]  # get the index of the max log-probability
-            correct_tac += pred_tac.eq(target[:, 0].view_as(pred_tac)).sum().item()
+            # test_loss_tac += F.nll_loss(output_tac, target[:, 0]).sum().item()  # sum up batch loss
+            # pred_tac = output_tac.max(1, keepdim=True)[1]  # get the index of the max log-probability
+            # correct_tac += pred_tac.eq(target[:, 0].view_as(pred_tac)).sum().item()
 
     test_loss_ac /= len(test_loader.dataset)
-    test_loss_tac /= len(test_loader.dataset)
+    # test_loss_tac /= len(test_loader.dataset)
     print('\nTest set ac: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
         test_loss_ac, correct_ac, len(test_loader.dataset),
         100. * correct_ac / len(test_loader.dataset) * 1.0))
-    print('\nTest set tac: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss_tac, correct_tac, len(test_loader.dataset),
-        100. * correct_tac / len(test_loader.dataset) * 1.0))
+    # print('\nTest set tac: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
+    #     test_loss_tac, correct_tac, len(test_loader.dataset),
+    #     100. * correct_tac / len(test_loader.dataset) * 1.0))
 
     model.train()
 
-    return correct_ac / len(test_loader.dataset)*1.0, correct_tac / len(test_loader.dataset)*1.0
+    # return correct_ac / len(test_loader.dataset)*1.0, correct_tac / len(test_loader.dataset)*1.0
+    return correct_ac / len(test_loader.dataset)*1.0
 
 
 def run(config):
@@ -78,7 +80,7 @@ def run(config):
     num_domain = config['num_domain']
     dim_z = config['dim_z']
 
-    state_dict = {'epoch': 0, 'iterations': 0, 'config': config}
+    state_dict = {'epoch': 0, 'iterations': 0, 'best_score': 0, 'final_score': 0, 'config': config}
 
     if config['trainer'] == 'DA_Infer_TAC':
         trainer = DA_Infer_TAC(config)
@@ -136,6 +138,8 @@ def run(config):
         if test_acc_target_c > best_score:
             best_score = test_acc_target_c
             state_dict['best_score'] = best_score
+        if ep == config['num_epochs'] - 1:
+            state_dict['fina_score'] = test_acc_target_c
 
         for it, (x, y) in enumerate(train_loader):
             if x.size(0) != batch_size:

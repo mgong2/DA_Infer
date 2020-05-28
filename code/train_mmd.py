@@ -68,7 +68,7 @@ def run(config):
     batch_size = config['batch_size']
     num_domain = config['num_domain']
 
-    state_dict = {'epoch': 0, 'iterations': 0, 'best_score': 0, 'config': config}
+    state_dict = {'epoch': 0, 'iterations': 0, 'best_score': 0, 'final_score': 0, 'config': config}
 
     if config['trainer'] == 'DA_Infer_JMMD':
         trainer = DA_Infer_JMMD(config)
@@ -123,6 +123,8 @@ def run(config):
         if test_acc_target_c > best_score:
             best_score = test_acc_target_c
             state_dict['best_score'] = best_score
+        if ep == config['num_epochs'] - 1:
+            state_dict['fina_score'] = test_acc_target_c
 
         for it, (x, y) in enumerate(train_loader):
             if x.size(0) != batch_size:

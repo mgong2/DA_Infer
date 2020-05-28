@@ -92,6 +92,7 @@ class MLP_Generator(nn.Module):
 class MLP_AuxClassifier(nn.Module):
     def __init__(self, i_dim, cl_num, do_num, num_layer=1, num_nodes=[64], is_reg=False):
         super(MLP_AuxClassifier, self).__init__()
+        self.cls = MLP(num_layer + 2, [i_dim] + num_nodes +[cl_num])
         self.common_net = MLP(num_layer + 1, [i_dim] + num_nodes, relu_final=True)
         if is_reg:
             self.aux_c = nn.Linear(num_nodes[-1], 1)
@@ -101,7 +102,6 @@ class MLP_AuxClassifier(nn.Module):
             self.aux_c_tw = nn.Linear(num_nodes[-1], cl_num)
         self.aux_d = nn.Linear(num_nodes[-1], do_num)
         self.aux_d_tw = nn.Linear(num_nodes[-1], do_num)
-        self.cls = MLP(num_layer + 2, [i_dim] + num_nodes +[cl_num])
 
     def forward(self, input0):
         input = self.common_net(input0)
