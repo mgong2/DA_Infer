@@ -132,14 +132,14 @@ def run(config):
     for ep in range(state_dict['epoch'], config['num_epochs']):
         state_dict['epoch'] = ep
 
-        test_acc_target_c, test_acc_target_ct = test_acc(trainer.dis, test_loader, device=device)
+        test_acc_target_c = test_acc(trainer.dis, test_loader, device=device)
         writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
-        writer.add_scalar('test_acc_target_tac', test_acc_target_ct, ep)
+        # writer.add_scalar('test_acc_target_tac', test_acc_target_ct, ep)
         if test_acc_target_c > best_score:
             best_score = test_acc_target_c
             state_dict['best_score'] = best_score
         if ep == config['num_epochs'] - 1:
-            state_dict['fina_score'] = test_acc_target_c
+            state_dict['final_score'] = test_acc_target_c
 
         for it, (x, y) in enumerate(train_loader):
             if x.size(0) != batch_size:

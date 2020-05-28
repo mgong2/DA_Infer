@@ -124,7 +124,7 @@ def run(config):
             best_score = test_acc_target_c
             state_dict['best_score'] = best_score
         if ep == config['num_epochs'] - 1:
-            state_dict['fina_score'] = test_acc_target_c
+            state_dict['final_score'] = test_acc_target_c
 
         for it, (x, y) in enumerate(train_loader):
             if x.size(0) != batch_size:
