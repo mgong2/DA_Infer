@@ -129,6 +129,7 @@ def run(config):
     Giters = config['num_G_steps']
     Diter = 0
     Giter = Giters
+    best_score = state_dict['best_score']
     for ep in range(state_dict['epoch'], config['num_epochs']):
         state_dict['epoch'] = ep
 
