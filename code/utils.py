@@ -86,7 +86,7 @@ def prepare_parser():
         '--mlp_layers', type=int, default=4,
         help='number of MLP hidden layers (default: %(default)s)')
     parser.add_argument(
-        '--mlp_nodes', type=int, default=[10, 10, 10, 10],
+        '--mlp_nodes', type=int, default=10,
         help='number of nodes in each MLP hidden layer (default: %(default)s)')
     parser.add_argument(
         '--dim_z', type=int, default=4,

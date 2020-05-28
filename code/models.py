@@ -53,7 +53,7 @@ class Linear_Generator(nn.Module):
 
 # a MLP generator
 class MLP_Generator(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=[64], is_reg=False, prob=True):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=64, is_reg=False, prob=True):
         super(MLP_Generator, self).__init__()
         self.prob = prob
         if prob:
@@ -63,7 +63,7 @@ class MLP_Generator(nn.Module):
         else:
             self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
-        self.decoder = MLP(num_layer + 2, [z_dim+cl_dim+do_dim] + num_nodes + [i_dim])
+        self.decoder = MLP(num_layer + 2, [z_dim+cl_dim+do_dim] + [num_nodes]*num_layer + [i_dim])
         self.is_reg = is_reg
 
     def forward(self, noise, input_c, input_d, noise_d=None):
@@ -90,18 +90,18 @@ class MLP_Generator(nn.Module):
 
 # a MLP auxiliary classifier, shared auxiliary classifiers
 class MLP_AuxClassifier(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, num_layer=1, num_nodes=[64], is_reg=False):
+    def __init__(self, i_dim, cl_num, do_num, num_layer=1, num_nodes=64, is_reg=False):
         super(MLP_AuxClassifier, self).__init__()
-        self.cls = MLP(num_layer + 2, [i_dim] + num_nodes +[cl_num])
-        self.common_net = MLP(num_layer + 1, [i_dim] + num_nodes, relu_final=True)
+        self.cls = MLP(num_layer + 2, [i_dim] + [num_nodes]*num_layer +[cl_num])
+        self.common_net = MLP(num_layer + 1, [i_dim] + [num_nodes]*num_layer, relu_final=True)
         if is_reg:
-            self.aux_c = nn.Linear(num_nodes[-1], 1)
-            self.aux_c_tw = nn.Linear(num_nodes[-1], 1)
+            self.aux_c = nn.Linear(num_nodes, 1)
+            self.aux_c_tw = nn.Linear(num_nodes, 1)
         else:
-            self.aux_c = nn.Linear(num_nodes[-1], cl_num)
-            self.aux_c_tw = nn.Linear(num_nodes[-1], cl_num)
-        self.aux_d = nn.Linear(num_nodes[-1], do_num)
-        self.aux_d_tw = nn.Linear(num_nodes[-1], do_num)
+            self.aux_c = nn.Linear(num_nodes, cl_num)
+            self.aux_c_tw = nn.Linear(num_nodes, cl_num)
+        self.aux_d = nn.Linear(num_nodes, do_num)
+        self.aux_d_tw = nn.Linear(num_nodes, do_num)
 
     def forward(self, input0):
         input = self.common_net(input0)
@@ -159,9 +159,9 @@ class MLP_AuxClassifier(nn.Module):
 
 # a MLP classifier
 class MLP_Classifier(nn.Module):
-    def __init__(self, i_dim, cl_num, num_layer=1, num_nodes=[64]):
+    def __init__(self, i_dim, cl_num, num_layer=1, num_nodes=64):
         super(MLP_Classifier, self).__init__()
-        self.net = MLP(num_layer + 2, [i_dim] + num_nodes +[cl_num])
+        self.net = MLP(num_layer + 2, [i_dim] + [num_nodes]*num_layer +[cl_num])
 
     def forward(self, input):
         output_c = self.net(input)
@@ -230,7 +230,7 @@ class Graph:
 
 # a decoder according to a DAG
 class DAG_Generator(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=[64], is_reg=False, dagMat=None, prob=True):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=64, is_reg=False, dagMat=None, prob=True):
         super(DAG_Generator, self).__init__()
         # create a dag
         dag = Graph(i_dim)
@@ -263,7 +263,7 @@ class DAG_Generator(nn.Module):
         nets = nn.ModuleList()
         for i in range(i_dim):
             num_nodesIn = int(numInput[i]) + cl_dim + do_dim + z_dim
-            num_nodes_i = [num_nodesIn] + num_nodes + [1]
+            num_nodes_i = [num_nodesIn] + [num_nodes]*num_layer + [1]
             netMB = MLP(num_layer + 2, num_nodes_i)
             nets.append(netMB)
 
@@ -383,7 +383,7 @@ class DAG_Generator(nn.Module):
 
 # a decoder according to a partial DAG
 class PDAG_Generator(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=[64], is_reg=False, dagMat=None, prob=True):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, num_layer=1, num_nodes=64, is_reg=False, dagMat=None, prob=True):
         super(PDAG_Generator, self).__init__()
 
         # find undirected groups of variables
@@ -467,7 +467,7 @@ class PDAG_Generator(nn.Module):
         dimNoise = np.zeros(i_dimNew, dtype=int)
         for i in range(i_dimNew):
             num_nodesIn = int(numInput[i]) + cl_dim + do_dim + z_dim * len(nodesA[i])
-            num_nodes_i = [num_nodesIn] + num_nodes + [len(nodesA[i])]
+            num_nodes_i = [num_nodesIn] + [num_nodes]*num_layer + [len(nodesA[i])]
             netMB = MLP(num_layer + 2, num_nodes_i)
             nets.append(netMB)
             dimNoise[i] = len(nodesA[i])
