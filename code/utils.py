@@ -10,8 +10,10 @@ import time
 from dataset_simul import *
 from dataset_flow import *
 from dataset_wifi import *
+from dataset_mnistr import *
 import torch.nn as nn
 
+## Default value set for dataset flow and DA_Infer_MMD trainer
 
 def prepare_parser():
     usage = 'Parser for all scripts.'
@@ -25,7 +27,7 @@ def prepare_parser():
         '--num_workers', type=int, default=1,
         help='Number of dataloader workers; consider using less for HDF5 '
              '(default: %(default)s)')
-    parser.add_argument('--cuda', type=bool, default=False,
+    parser.add_argument('--cuda', action='store_true',
         help='Using cuda (default: %(default)s)')
     parser.add_argument(
         '--num_class', type=int, default=2,
@@ -98,10 +100,10 @@ def prepare_parser():
         '--dim_d', type=int, default=1,
         help='domain embedding dimensionality: %(default)s)')
     parser.add_argument(
-        '--is_reg', type=bool, default=False,
+        '--is_reg', action='store_true',
         help='is regression?: %(default)s)')
     parser.add_argument(
-        '--useMB', type=bool, default=True,
+        '--useMB', action='store_false',
         help='is regression?: %(default)s)')
     parser.add_argument(
         '--dag_mat_file', type=str, default='dag_mat.npz',
@@ -109,7 +111,7 @@ def prepare_parser():
 
     ### Model init stuff ###
     parser.add_argument(
-        '--skip_init', action='store_true', default=False,
+        '--skip_init', action='store_true',
         help='Skip initialization, ideal for testing when ortho init was used '
              '(default: %(default)s)')
 
@@ -250,6 +252,8 @@ def get_data_loader(conf, batch_size, num_workers):
         dataset = DatasetFlow5(conf)
     elif conf['class_name'] == 'DatasetWifi':
         dataset = DatasetWifi(conf)
+    elif conf['class_name'] == 'DatasetMNISTR':
+        dataset = DatasetMNISTR(conf)
     else:
         dataset = None
     return torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)

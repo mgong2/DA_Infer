@@ -70,9 +70,7 @@ class MLP_Generator(nn.Module):
         if self.is_reg:
             output_c = input_c
         else:
-            input_c = input_c
             output_c = self.lc(input_c)
-        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d)
             output_d = torch.matmul(input_d, theta)
@@ -292,7 +290,6 @@ class DAG_Generator(nn.Module):
             inputs_c = input_c.view(batch_size, 1)
         else:
             inputs_c = self.cnet(input_c)
-        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d)
             inputs_d = torch.matmul(input_d, theta)
@@ -344,7 +341,6 @@ class DAG_Generator(nn.Module):
             inputs_c = input_c.view(batch_size, 1)
         else:
             inputs_c = self.cnet(input_c)
-        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d)
             inputs_d = torch.matmul(input_d, theta)
@@ -497,7 +493,6 @@ class PDAG_Generator(nn.Module):
             inputs_c = input_c.view(batch_size, 1)
         else:
             inputs_c = self.cnet(input_c)
-        input_d = input_d
         if self.prob:
             theta = self.mu + torch.mul(self.sigma, noise_d[:, :self.i_dimNew * self.do_dim])
             inputs_d = torch.matmul(input_d, theta)
@@ -555,7 +550,6 @@ class PDAG_Generator(nn.Module):
             inputs_c = input_c.view(batch_size, 1)
         else:
             inputs_c = self.cnet(input_c)
-        input_d = input_d
         if self.prob:
             # theta = self.mu + torch.mul(self.sigma, noise_d)
             theta = self.mu + torch.mul(self.sigma, noise_d[:, :self.i_dimNew * self.do_dim])
@@ -631,3 +625,178 @@ class PDAG_Generator(nn.Module):
 
         # Return the list of groups.
         return result
+
+
+# ch: channel, set by mlp_nodes
+# i_dim: input image channels
+class CNN_Classifier(nn.Module):
+    def __init__(self, i_dim, cl_num, ch):
+        super(CNN_Classifier, self).__init__()
+        self.i_dim = i_dim
+        self.ch = ch
+        self.cl_num = cl_num
+
+        self.classifier = nn.Sequential(
+            nn.Conv2d(3, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            # nn.Conv2d(ch, ch, 3, 1, 1),
+            # nn.BatchNorm2d(ch, momentum=0.99),
+            # nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.MaxPool2d(2),
+            nn.Dropout2d(0.5),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            # nn.Conv2d(ch, ch, 3, 1, 1),
+            # nn.BatchNorm2d(ch, momentum=0.99),
+            # nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.MaxPool2d(2),
+            nn.Dropout2d(0.5),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            # nn.Conv2d(ch, ch, 3, 1, 1),
+            # nn.BatchNorm2d(ch, momentum=0.99),
+            # nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(ch, cl_num, 1)
+        )
+
+    def forward(self, x):
+        logits = self.classifier(x)
+        return logits.view(x.size(0), 10)
+
+
+class CNN_AuxClassifier(nn.Module):
+    def __init__(self, i_dim, cl_num, do_num, ch=64):
+        super(CNN_AuxClassifier, self).__init__()
+        self.i_dim = i_dim
+        self.ch = ch
+        self.cl_num = cl_num
+        self.do_num = do_num
+        self.cls = CNN_Classifier(i_dim, cl_num, ch)
+
+        self.common_net = nn.Sequential(
+            nn.Conv2d(3, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            # nn.Conv2d(ch, ch, 3, 1, 1),
+            # nn.BatchNorm2d(ch, momentum=0.99),
+            # nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.MaxPool2d(2),
+            nn.Dropout2d(0.5),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            # nn.Conv2d(ch, ch, 3, 1, 1),
+            # nn.BatchNorm2d(ch, momentum=0.99),
+            # nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.MaxPool2d(2),
+            nn.Dropout2d(0.5),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            # nn.Conv2d(ch, ch, 3, 1, 1),
+            # nn.BatchNorm2d(ch, momentum=0.99),
+            # nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(ch, ch, 3, 1, 1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.AdaptiveAvgPool2d(1),
+            # nn.Conv2d(ch, cl_num, 1)
+        )
+        self.aux_c = nn.Conv2d(ch, cl_num, 1)
+        self.aux_c_tw = nn.Conv2d(ch, cl_num, 1)
+        self.aux_d = nn.Conv2d(ch, do_num, 1)
+        self.aux_d_tw = nn.Conv2d(ch, do_num, 1)
+        self.disc = nn.Conv2d(ch, 1, 1)
+
+    def forward(self, input0):
+        batch_size = input0.size(0)
+        input = self.common_net(input0)
+        output_c = self.aux_c(input)
+        output_c_tw = self.aux_c_tw(input)
+        output_d = self.aux_d(input)
+        output_d_tw = self.aux_d_tw(input)
+        output_disc = self.disc(input)
+        output_cls = self.cls(input0)
+        output_c = output_c.view(batch_size, self.cl_num)
+        output_c_tw = output_c_tw.view(batch_size, self.cl_num)
+        output_d = output_d.view(batch_size, self.do_num)
+        output_d_tw = output_d_tw.view(batch_size, self.do_num)
+        output_cls = output_cls.view(batch_size, self.cl_num)
+        output_disc = output_disc.view(batch_size, 1)
+
+        return output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc
+
+
+# a MLP generator
+class CNN_Generator(nn.Module):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, ch=64, prob=True):
+        super(CNN_Generator, self).__init__()
+        self.prob = prob
+        self.do_dim = do_dim
+        self.ch = ch
+        if prob:
+            # VAE posterior parameters, Gaussian
+            self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
+            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
+        else:
+            self.ld = nn.Linear(do_num, do_dim, bias=False)
+        self.lc = nn.Linear(cl_num, cl_dim, bias=False)
+
+        self.decoder0 = nn.Sequential(
+            nn.Linear(z_dim + cl_dim, ch * 4 * 4),
+            nn.BatchNorm1d(ch * 4 * 4, momentum=0.99),
+            nn.ReLU(),
+        )
+        self.decoder1 = nn.Sequential(
+            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.ReLU(),
+        )
+        self.decoder2 = nn.Sequential(
+            nn.ConvTranspose2d(ch + do_dim, ch, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(ch, momentum=0.99),
+            nn.ReLU(),
+            nn.ConvTranspose2d(ch, i_dim, kernel_size=4, stride=2, padding=1),
+            nn.Tanh()
+        )
+
+    def forward(self, noise, input_c, input_d, noise_d=None):
+        batch_size = noise.shape[0]
+        embed_c = self.lc(input_c)
+        if self.prob:
+            theta = self.mu + torch.mul(self.sigma, noise_d)
+            embed_d = torch.matmul(input_d, theta)
+        else:
+            embed_d = self.ld(input_d)
+        output0 = self.decoder0(torch.cat((embed_c, noise), axis=1))
+        output0 = output0.view(batch_size, self.ch, 4, 4)
+        output1 = self.decoder1(output0)
+        embed_d_expand = embed_d.view(batch_size, self.do_dim, 1, 1).expand(-1, -1, output1.size(2), output1.size(3))
+        output1_append = torch.cat((output1, embed_d_expand), 1)
+        output2 = self.decoder2(output1_append)
+        if self.prob:
+            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            if KL_reg.shape[1] > 1:
+                KL_reg = KL_reg.sum(axis=1)
+            return output2, -KL_reg
+        else:
+            return output2

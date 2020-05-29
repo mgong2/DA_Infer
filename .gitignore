@@ -3,6 +3,7 @@ scripts/
 logs/
 weights/
 slurm/
+samples/
 .idea/
 *.tar.gz
 *.zip
