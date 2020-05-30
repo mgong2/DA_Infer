@@ -630,11 +630,6 @@ class DA_Infer_JMMD(object):
         else:
             raise ValueError('training mode not supported.')
 
-        self.mmd_loss = errG
-        self.mmd_loss_s = errG_s
-        self.mmd_loss_t = errG_t
-        self.aux_loss_c = aux_loss_c
-
     def resume(self, snapshot_prefix):
             gen_filename = snapshot_prefix + '_gen.pkl'
             dis_filename = snapshot_prefix + '_dis.pkl'
