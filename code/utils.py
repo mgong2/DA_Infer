@@ -225,21 +225,23 @@ def name_from_config(config):
     name = '_'.join([
         item for item in [
             config['dataset'] + '/',
-            'AC_weight%3.2f' % config['AC_weight'],
-            'TAR_weight%3.2f' % config['TAR_weight'],
+            'tarId%d' % config['tar_id'],
+            'seed%d' % config['seed'],
+            'idim%d' % config['idim'],
+            config['trainer'],
             '%s' % config['estimate'],
-            'nDs%d' % config['num_D_steps'],
             config['G_model'],
             config['D_model'],
-            config['trainer'],
-            'tarId%d' % config['tar_id'],
+            'AC_weight%3.2f' % config['AC_weight'],
+            'TAR_weight%3.2f' % config['TAR_weight'],
+            'useMB%d' % config['useMB'],
             'mlp_nodes%d' % config['mlp_nodes'],
-            'seed%d' % config['seed'],
             'bs%d' % config['batch_size'],
             'Glr%2.1e' % config['G_lr'],
             'Dlr%2.1e' % config['D_lr'],
             'numDomain%d' % config['num_domain'],
             'dimDomain%d' % config['dim_d'],
+            'dimHidden%d' % config['dim_z'],
         ]
         if item is not None])
 

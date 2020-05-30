@@ -20,6 +20,7 @@ class DA_Poolnn(object):
         num_layer = config['mlp_layers']
         num_nodes = config['mlp_nodes']
 
+        utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_Classifier':
             self.dis = MLP_Classifier(input_dim, num_class, num_layer, num_nodes)
         if config['D_model'] == 'CNN_Classifier':
