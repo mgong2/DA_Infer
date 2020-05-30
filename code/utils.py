@@ -62,6 +62,9 @@ def prepare_parser():
         '--trainer', type=str, default='DA_Infer_JMMD',
         help='train functions (default: %(default)s)')
     parser.add_argument(
+        '--train_mode', type=str, default='m1',
+        help='train modes (default: %(default)s)')
+    parser.add_argument(
         '--estimate', type=str, default='ML',
         help='ML/Bayesian estimate (default: %(default)s)')
     parser.add_argument(
@@ -71,6 +74,10 @@ def prepare_parser():
     parser.add_argument(
         '--AC_weight', type=float, default=1.0,
         help='auxiliary classifier weight '
+             '(default: %(default)s)')
+    parser.add_argument(
+        '--SRC_weight', type=float, default=1.0,
+        help='target domain classifier weight '
              '(default: %(default)s)')
     parser.add_argument(
         '--TAR_weight', type=float, default=0.1,
@@ -233,11 +240,13 @@ def name_from_config(config):
             'seed%d' % config['seed'],
             'idim%d' % config['idim'],
             config['trainer'],
-            '%s' % config['estimate'],
+            config['train_mode'],
+            config['estimate'],
             'warmup%d' % config['warmup'],
             config['G_model'],
             config['D_model'],
             'AC_weight%3.2f' % config['AC_weight'],
+            'SRC_weight%3.2f' % config['SRC_weight'],
             'TAR_weight%3.2f' % config['TAR_weight'],
             'useMB%d' % config['useMB'],
             'mlp_nodes%d' % config['mlp_nodes'],
