@@ -465,13 +465,6 @@ class DA_Infer_JMMD(object):
         is_reg = config['is_reg']
         do_ss = config['do_ss']
 
-        # sigma for MMD
-        base_x = config['base_x']
-        base_y = config['base_y']
-        sigma_list = [0.125, 0.25, 0.5, 1]
-        sigma_listx = [sigma * base_x for sigma in sigma_list]
-        sigma_listy = [sigma * base_y for sigma in sigma_list]
-
         # generate random Gaussian noise
         noise = torch.randn(batch_size, dim_hidden).to(device)
 
@@ -490,145 +483,48 @@ class DA_Infer_JMMD(object):
 
         ids_s = y_a[:, 1] != num_domain - 1
         ids_t = y_a[:, 1] == num_domain - 1
-        # output_cr = self.dis(x_a[ids_s])
-        # output_cf = self.dis(fake_x_a)
+        output_cr = self.dis(x_a[ids_s])
+        output_cf = self.dis(fake_x_a)
         # aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + self.aux_loss_func(output_cf[ids_s], y_a[ids_s, 0]) \
         #              + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
 
-        if config['train_mode'] == 'm1':
-            if state['epoch'] < config['warmup']:
-                if not is_reg:
-                    errG_s = mix_rbf_mmd2_joint(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s], y_a_onehot[ids_s],
-                                                d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx)
-                else:
-                    errG_s = mix_rbf_mmd2_joint_regress(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s],
-                                                        y_a_onehot[ids_s],
-                                                        d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx,
-                                                        sigma_list1=sigma_listy)
-                errG_t = mix_rbf_mmd2(fake_x_a[ids_t], x_a[ids_t], sigma_list=sigma_listx)
-
-                if config['estimate'] == 'ML':
-                    errG = errG_s + errG_t
-                    errG.backward()
-                elif config['estimate'] == 'Bayesian':
-                    errG = errG_s + errG_t
-                    errG_kl = errG + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze())
-                    errG_kl.backward()
-                self.gen_opt.step()
-                self.mmd_loss = errG
-                self.mmd_loss_s = errG_s
-                self.mmd_loss_t = errG_t
-            else:
-                lambda_src = config['SRC_weight']
-                lambda_tar = config['TAR_weight']
-                output_cr = self.dis(x_a[ids_s])
-                output_cf = self.dis(fake_x_a.detach())
-                aux_loss_c = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
-                             lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
-                aux_loss_c.backward()
-                self.dis_opt.step()
-                self.aux_loss_c = aux_loss_c
-        elif config['train_mode'] == 'm2':
-            if state['epoch'] < config['warmup']:
-                output_cr = self.dis(x_a[ids_s])
-                aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0])
-                if not is_reg:
-                    errG_s = mix_rbf_mmd2_joint(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s], y_a_onehot[ids_s],
-                                                d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx)
-                else:
-                    errG_s = mix_rbf_mmd2_joint_regress(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s],
-                                                        y_a_onehot[ids_s],
-                                                        d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx,
-                                                        sigma_list1=sigma_listy)
-                errG_t = mix_rbf_mmd2(fake_x_a[ids_t], x_a[ids_t], sigma_list=sigma_listx)
-                if config['estimate'] == 'ML':
-                    errG = errG_s + errG_t
-                    errG_cls = errG + aux_loss_c
-                elif config['estimate'] == 'Bayesian':
-                    errG = errG_s + errG_t
-                    errG_cls = errG + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze()) + aux_loss_c
-                errG_cls.backward()
-                self.gen_opt.step()
-                self.dis_opt.step()
-                self.mmd_loss = errG
-                self.mmd_loss_s = errG_s
-                self.mmd_loss_t = errG_t
-                self.aux_loss_c = aux_loss_c
-            else:
-                output_cr = self.dis(x_a[ids_s])
-                output_cf = self.dis(fake_x_a)
-                lambda_tar = config['TAR_weight']
-                aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
-                             lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
-
-                if not is_reg:
-                    errG_s = mix_rbf_mmd2_joint(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s], y_a_onehot[ids_s],
-                                                d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx)
-                else:
-                    errG_s = mix_rbf_mmd2_joint_regress(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s],
-                                                        y_a_onehot[ids_s],
-                                                        d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx,
-                                                        sigma_list1=sigma_listy)
-                errG_t = mix_rbf_mmd2(fake_x_a[ids_t], x_a[ids_t], sigma_list=sigma_listx)
-
-                lambda_c = config['AC_weight']
-                if config['estimate'] == 'ML':
-                    errG = errG_s + errG_t
-                    errG_cls = errG + lambda_c * aux_loss_c
-                elif config['estimate'] == 'Bayesian':
-                    errG = errG_s + errG_t
-                    errG_cls = errG + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.to(device).squeeze(),
-                                                                               KL_reg.squeeze())
-                errG_cls.backward()
-                self.gen_opt.step()
-                self.dis_opt.step()
-                self.mmd_loss = errG
-                self.mmd_loss_s = errG_s
-                self.mmd_loss_t = errG_t
-                self.aux_loss_c = aux_loss_c
-        elif config['train_mode'] == 'm3':
-            if state['epoch'] < config['warmup']*2/3:
-                output_cr = self.dis(x_a[ids_s])
-                aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0])
-                aux_loss_c.backward()
-                self.dis_opt.step()
-                self.aux_loss_c = aux_loss_c
-            elif state['epoch'] < config['warmup']:
-                output_cf = self.dis(fake_x_a)
-                if not is_reg:
-                    errG_s = mix_rbf_mmd2_joint(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s], y_a_onehot[ids_s],
-                                                d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx)
-                else:
-                    errG_s = mix_rbf_mmd2_joint_regress(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s],
-                                                        y_a_onehot[ids_s],
-                                                        d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx,
-                                                        sigma_list1=sigma_listy)
-                errG_t = mix_rbf_mmd2(fake_x_a[ids_t], x_a[ids_t], sigma_list=sigma_listx)
-                lambda_tar = config['TAR_weight']
-                if config['estimate'] == 'ML':
-                    errG = errG_s + errG_t
-                    errG_cls = errG + lambda_tar * self.aux_loss_func(output_cf[ids_t].detach(), y_a[ids_t, 0])
-                elif config['estimate'] == 'Bayesian':
-                    errG = errG_s + errG_t
-                    errG_cls = errG + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze()) + \
-                           lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
-                errG_cls.backward()
-                self.gen_opt.step()
-                self.mmd_loss = errG
-                self.mmd_loss_s = errG_s
-                self.mmd_loss_t = errG_t
-            else:
-                lambda_src = config['SRC_weight']
-                lambda_tar = config['TAR_weight']
-                output_cr = self.dis(x_a[ids_s])
-                output_cf = self.dis(fake_x_a.detach())
-                aux_loss_c = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
-                             lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
-                aux_loss_c.backward()
-                self.dis_opt.step()
-                self.aux_loss_c = aux_loss_c
+        if state['epoch'] < config['warmup']:
+            lambda_tar = 0
         else:
-            raise ValueError('training mode not supported.')
+            lambda_tar = config['TAR_weight']
+
+        aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
+                     + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
+        # aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0])
+
+        # sigma for MMD
+        base_x = config['base_x']
+        base_y = config['base_y']
+        sigma_list = [0.125, 0.25, 0.5, 1]
+        sigma_listx = [sigma * base_x for sigma in sigma_list]
+        sigma_listy = [sigma * base_y for sigma in sigma_list]
+
+        if not is_reg:
+            errG_s = mix_rbf_mmd2_joint(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s], y_a_onehot[ids_s],
+                                        d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx)
+        else:
+            errG_s = mix_rbf_mmd2_joint_regress(fake_x_a[ids_s], x_a[ids_s], y_a_onehot[ids_s], y_a_onehot[ids_s],
+                                                d_onehot[ids_s], d_onehot[ids_s], sigma_list=sigma_listx, sigma_list1=sigma_listy)
+        errG_t = mix_rbf_mmd2(fake_x_a[ids_t], x_a[ids_t], sigma_list=sigma_listx)
+
+        lambda_c = config['AC_weight']
+        if config['estimate'] == 'ML':
+            errG = errG_s + errG_t + lambda_c * aux_loss_c
+        elif config['estimate'] == 'Bayesian':
+            errG = errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze())
+
+        errG.backward()
+        self.gen_opt.step()
+        self.dis_opt.step()
+        self.mmd_loss = errG
+        self.mmd_loss_s = errG_s
+        self.mmd_loss_t = errG_t
+        self.aux_loss_c = aux_loss_c
 
     def resume(self, snapshot_prefix):
             gen_filename = snapshot_prefix + '_gen.pkl'
@@ -752,8 +648,6 @@ class DA_Infer_JMMD_DAG(object):
             lambda_tar = 0
         else:
             lambda_tar = config['TAR_weight']
-        # aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
-        #              + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
         aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
                      + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
 
