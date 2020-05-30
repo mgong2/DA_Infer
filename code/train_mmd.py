@@ -117,7 +117,6 @@ def run(config):
     best_score = state_dict['best_score']
     for ep in range(state_dict['epoch'], config['num_epochs']):
         state_dict['epoch'] = ep
-
         test_acc_target_c = test_acc(trainer.dis, test_loader, device=device)
         writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
         if test_acc_target_c > best_score:
@@ -134,7 +133,7 @@ def run(config):
             x = x.to(device)
             y = y.to(device).view(x.size(0), 2)
 
-            trainer.gen_update(x, y, config, device)
+            trainer.gen_update(x, y, config, state_dict, device)
 
             # Dump training stats in log file
             if (iterations + 1) % config['save_every'] == 0:

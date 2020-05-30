@@ -454,7 +454,7 @@ class DA_Infer_JMMD(object):
         self.gen.to(device)
         self.dis.to(device)
 
-    def gen_update(self, x_a, y_a, config, device='cpu'):
+    def gen_update(self, x_a, y_a, config, state, device='cpu'):
         self.gen.zero_grad()
         self.dis.zero_grad()
         batch_size = config['batch_size']
@@ -485,9 +485,14 @@ class DA_Infer_JMMD(object):
         ids_t = y_a[:, 1] == num_domain - 1
         output_cr = self.dis(x_a[ids_s])
         output_cf = self.dis(fake_x_a)
-        lambda_tar = config['TAR_weight']
         # aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + self.aux_loss_func(output_cf[ids_s], y_a[ids_s, 0]) \
         #              + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
+
+        if state['epoch'] < config['warmup']:
+            lambda_tar = 0
+        else:
+            lambda_tar = config['TAR_weight']
+
         aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
                      + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
         # aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0])

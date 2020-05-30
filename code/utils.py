@@ -76,6 +76,10 @@ def prepare_parser():
         '--TAR_weight', type=float, default=0.1,
         help='target domain classifier weight '
              '(default: %(default)s)')
+    parser.add_argument(
+        '--warmup', type=int, default=200,
+        help='warmp up epochs training in the source domain'
+             '(default: %(default)s)')
 
     ### Model stuff ###
     parser.add_argument(
@@ -230,6 +234,7 @@ def name_from_config(config):
             'idim%d' % config['idim'],
             config['trainer'],
             '%s' % config['estimate'],
+            'warmup%d' % config['warmup'],
             config['G_model'],
             config['D_model'],
             'AC_weight%3.2f' % config['AC_weight'],
