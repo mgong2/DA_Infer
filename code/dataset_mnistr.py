@@ -67,7 +67,7 @@ class DatasetMNISTR3(data.Dataset):
         self.num_domain = specs['num_domain']
         self.tar_id = specs['tar_id']
         self.resolution = specs['resolution']
-        self.angles = [[30, 60, 90, 0], [0, 60, 90, 30], [0, 30, 90, 60], [0, 30, 60, 90]]
+        self.angles = [[45, 90, 0], [0, 90, 45], [0, 45, 90]]
         full_path = join(self.root, 'MNIST_rot.npz')
         self.transforms_train = transforms.Compose(
             [transforms.Resize(self.resolution), transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
