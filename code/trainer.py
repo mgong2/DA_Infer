@@ -502,7 +502,8 @@ class DA_Infer_AC_Adv(object):
 
         lambda_c = config['AC_weight']
         lambda_tar = config['TAR_weight']
-        gan_loss = self.sigmoid_xent(output_disc, torch.ones_like(output_disc, device=device))
+        # gan_loss = self.sigmoid_xent(output_disc, torch.ones_like(output_disc, device=device))
+        gan_loss = - output_disc.mean()
         aux_loss_c = self.aux_loss_func(output_c, y_a[:, 0])
         aux_loss_d = self.aux_loss_func(output_d, y_a[:, 1])
 
@@ -547,10 +548,11 @@ class DA_Infer_AC_Adv(object):
 
         lambda_tar = config['TAR_weight']
         lambda_c = config['AC_weight']
-        gan_loss = 0.5 * (
-                self.sigmoid_xent(output_disc1, torch.ones_like(output_disc1, device=device)) +
-                self.sigmoid_xent(output_disc, torch.zeros_like(output_disc, device=device))
-        )
+        # gan_loss = 0.5 * (
+        #         self.sigmoid_xent(output_disc1, torch.ones_like(output_disc1, device=device)) +
+        #         self.sigmoid_xent(output_disc, torch.zeros_like(output_disc, device=device))
+        # )
+        gan_loss = output_disc.mean() - output_disc1.mean()
         aux_loss_c1 = self.aux_loss_func(output_c1, y_a[:, 0])
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
 
