@@ -795,7 +795,7 @@ class DA_Infer_AC_Adv(object):
         #         self.sigmoid_xent(output_disc, torch.zeros_like(output_disc, device=device))
         # )
         # gan_loss = output_disc.mean() - output_disc1.mean()
-        gan_loss = discriminator_loss(output_disc1, output_disc)
+        gan_loss = discriminator_loss(output_disc, output_disc1)
         aux_loss_c1 = self.aux_loss_func(output_c1[ids_s], y_a[ids_s, 0])
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
         aux_loss_cls = self.aux_loss_func(output_cls[ids_t], y_a[ids_t, 0])
