@@ -29,6 +29,8 @@ class DA_Poolnn(object):
             self.dis = CNN_Classifier(input_dim, num_class, num_nodes)
         if config['D_model'] == 'UNIT_Classifier':
             self.dis = UNIT_Classifier(input_dim, num_class, num_nodes)
+        if config['D_model'] == 'RES_Classifier':
+            self.dis = RES_Classifier(input_dim, num_class, num_nodes)
 
         # set optimizers
         self.dis_opt = torch.optim.Adam(self.dis.parameters(), lr=config['D_lr'], betas=(config['D_B1'], config['D_B2']))
@@ -451,6 +453,12 @@ class DA_Infer_TAC_Adv(object):
         if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'Bayesian':
             self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
                                       num_nodes, prob=True)
+        if config['G_model'] == 'RES_Generator' and config['estimate'] == 'ML':
+            self.gen = RES_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                      num_nodes, prob=False)
+        if config['G_model'] == 'RES_Generator' and config['estimate'] == 'Bayesian':
+            self.gen = RES_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                      num_nodes, prob=True)
 
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_AuxClassifier':
@@ -459,6 +467,8 @@ class DA_Infer_TAC_Adv(object):
             self.dis = CNN_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
         if config['D_model'] == 'UNIT_AuxClassifier':
             self.dis = UNIT_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
+        if config['D_model'] == 'RES_AuxClassifier':
+            self.dis = RES_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
 
         # set optimizers
         self.gen_opt = torch.optim.Adam(self.gen.parameters(), lr=config['G_lr'], betas=(config['G_B1'], config['G_B2']))
@@ -673,9 +683,15 @@ class DA_Infer_AC_Adv(object):
                                      num_nodes, prob=True)
         if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'ML':
             self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                     num_nodes, prob=False)
+                                      num_nodes, prob=False)
         if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'Bayesian':
             self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                      num_nodes, prob=True)
+        if config['G_model'] == 'RES_Generator' and config['estimate'] == 'ML':
+            self.gen = RES_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                     num_nodes, prob=False)
+        if config['G_model'] == 'RES_Generator' and config['estimate'] == 'Bayesian':
+            self.gen = RES_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
                                      num_nodes, prob=True)
 
         utils.seed_rng(config['seed'])
@@ -685,6 +701,8 @@ class DA_Infer_AC_Adv(object):
             self.dis = CNN_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
         if config['D_model'] == 'UNIT_AuxClassifier':
             self.dis = UNIT_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
+        if config['D_model'] == 'RES_AuxClassifier':
+            self.dis = RES_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
 
         # set optimizers
         self.gen_opt = torch.optim.Adam(self.gen.parameters(), lr=config['G_lr'], betas=(config['G_B1'], config['G_B2']))

@@ -7,7 +7,7 @@ import numpy as np
 from collections import defaultdict
 import itertools
 import torch.nn.utils.spectral_norm as sn
-
+import torch.nn.functional as F
 
 #  mlp model
 class MLP(nn.Module):
@@ -755,13 +755,13 @@ class CNN_Classifier(nn.Module):
         self.cl_num = cl_num
 
         self.common_net = nn.Sequential(
-            sn(nn.Conv2d(i_dim, ch, 4, 2, 1)),
+            nn.Conv2d(i_dim, ch, 4, 2, 1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.Conv2d(ch, ch, 4, 2, 1)),
+            nn.Conv2d(ch, ch, 4, 2, 1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.Conv2d(ch, ch, 3, 2, 1)),
+            nn.Conv2d(ch, ch, 3, 2, 1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
         )
@@ -783,13 +783,13 @@ class CNN_AuxClassifier(nn.Module):
         self.do_num = do_num
 
         self.common_net = nn.Sequential(
-            sn(nn.Conv2d(i_dim, ch, 4, 2, 1)),
+            nn.Conv2d(i_dim, ch, 4, 2, 1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.Conv2d(ch, ch, 4, 2, 1)),
+            nn.Conv2d(ch, ch, 4, 2, 1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.Conv2d(ch, ch, 3, 2, 1)),
+            nn.Conv2d(ch, ch, 3, 2, 1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
         )
@@ -829,18 +829,18 @@ class CNN_Generator(nn.Module):
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
 
         self.decoder1 = nn.Sequential(
-            sn(nn.Linear(z_dim + cl_dim + do_dim, ch * 4 * 4)),
+            nn.Linear(z_dim + cl_dim + do_dim, ch * 4 * 4),
             nn.BatchNorm1d(ch * 4 * 4),
             nn.ReLU(True),
         )
         self.decoder2 = nn.Sequential(
-            sn(nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1)),
+            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(ch),
             nn.ReLU(True),
-            sn(nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1)),
+            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(ch),
             nn.ReLU(True),
-            sn(nn.ConvTranspose2d(ch, i_dim, kernel_size=4, stride=2, padding=1)),
+            nn.ConvTranspose2d(ch, i_dim, kernel_size=4, stride=2, padding=1),
             nn.Tanh()
         )
 
@@ -938,7 +938,7 @@ class UNIT_Classifier(nn.Module):
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
-            sn(nn.Conv2d(ch, cl_num, 2, 1, 0)),
+            nn.Conv2d(ch, cl_num, 2, 1, 0),
         )
 
     def forward(self, input0):
@@ -973,11 +973,11 @@ class UNIT_AuxClassifier(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
         )
-        self.aux_c = sn(nn.Conv2d(ch, cl_num, 2, 1, 0))
-        self.aux_d = sn(nn.Conv2d(ch, do_num, 2, 1, 0))
-        self.aux_c_tw = sn(nn.Conv2d(ch, cl_num, 2, 1, 0))
-        self.aux_d_tw = sn(nn.Conv2d(ch, do_num, 2, 1, 0))
-        self.disc = sn(nn.Conv2d(ch, 1, 2, 1, 0))
+        self.aux_c = nn.Conv2d(ch, cl_num, 2, 1, 0)
+        self.aux_d = nn.Conv2d(ch, do_num, 2, 1, 0)
+        self.aux_c_tw = nn.Conv2d(ch, cl_num, 2, 1, 0)
+        self.aux_d_tw = nn.Conv2d(ch, do_num, 2, 1, 0)
+        self.disc = nn.Conv2d(ch, 1, 2, 1, 0)
         self.cls = UNIT_Classifier(i_dim, cl_num, ch)
 
     def forward(self, input0):
@@ -989,4 +989,170 @@ class UNIT_AuxClassifier(nn.Module):
         output_disc = self.disc(input).view(-1, 1)
         output_cls = self.cls(input0)
 
+        return output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc
+
+
+class ConvBlock(nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size=[3, 3],
+                 padding=1, stride=1, n_class=None, bn=False,
+                 activation=F.relu, upsample=True, downsample=False,SN=True,emb=None,rate=1.0):
+        super().__init__()
+
+        gain = 2 ** 0.5
+
+        self.emb = emb
+
+        if SN:
+            self.conv1 = sn(nn.Conv2d(in_channel, out_channel,
+                                                 kernel_size, stride, padding,
+                                                 bias=False if bn else True))
+            self.conv2 = sn(nn.Conv2d(out_channel, out_channel,
+                                                 kernel_size, stride, padding,
+                                                 bias=False if bn else True))
+        else:
+            self.conv1 = nn.Conv2d(in_channel, out_channel,
+                                                 kernel_size, stride, padding,
+                                                 bias=False if bn else True)
+            self.conv2 = nn.Conv2d(out_channel, out_channel,
+                                                 kernel_size, stride, padding,
+                                                 bias=False if bn else True)
+
+        self.skip_proj = False
+        if in_channel != out_channel or upsample or downsample:
+            if SN == True:
+                self.conv_skip = sn(nn.Conv2d(in_channel, out_channel,
+                                                         1, 1, 0))
+            else:
+                self.conv_skip = nn.Conv2d(in_channel, out_channel,
+                                                         1, 1, 0)
+
+            self.skip_proj = True
+
+        self.upsample = upsample
+        self.downsample = downsample
+        self.activation = activation
+        self.bn = bn
+
+    def forward(self, input, class_id=None):
+        out = input
+
+        out = self.activation(out)
+        if self.upsample:
+            out = F.upsample(out, scale_factor=2)
+        out = self.conv1(out)
+        out = self.activation(out)
+        out = self.conv2(out)
+
+        if self.downsample:
+            out = F.avg_pool2d(out, 2)
+
+        if self.skip_proj:
+            skip = input
+            if self.upsample:
+                skip = F.upsample(skip, scale_factor=2)
+            skip = self.conv_skip(skip)
+            if self.downsample:
+                skip = F.avg_pool2d(skip, 2)
+
+        else:
+            skip = input
+
+        return out + skip
+
+
+# a CNN generator
+class RES_Generator(nn.Module):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, ch=64, prob=True):
+        super(RES_Generator, self).__init__()
+        self.prob = prob
+        self.do_dim = do_dim
+        self.ch = ch
+        if prob:
+            # VAE posterior parameters, Gaussian
+            self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
+            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
+        else:
+            self.ld = nn.Linear(do_num, do_dim, bias=False)
+        self.lc = nn.Linear(cl_num, cl_dim, bias=False)
+
+        self.decoder0 = nn.Sequential(
+            nn.Linear(z_dim + cl_dim + do_dim, ch * 4 * 4),
+        )
+        self.decoder = nn.Sequential(
+            ConvBlock(ch, ch),
+            ConvBlock(ch, ch),
+            ConvBlock(ch, ch),
+            nn.Tanh()
+        )
+
+    def forward(self, noise, input_c, input_d, noise_d=None):
+        embed_c = self.lc(input_c)
+        if self.prob:
+            theta = self.mu + torch.mul(self.sigma, noise_d)
+            embed_d = torch.matmul(input_d, theta)
+        else:
+            embed_d = self.ld(input_d)
+        z_cat = torch.cat((embed_c, noise, embed_d), axis=1)
+        z_cat = self.decoder0(z_cat)
+        z_cat = z_cat.view(z_cat.size(0), self.ch, 4, 4)
+        output = self.decoder(z_cat)
+        if self.prob:
+            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            if KL_reg.shape[1] > 1:
+                KL_reg = KL_reg.sum(axis=1)
+            return output, -KL_reg
+        else:
+            return output
+
+
+class RES_Classifier(nn.Module):
+    def __init__(self, i_dim, cl_num, ch):
+        super(RES_Classifier, self).__init__()
+        self.i_dim = i_dim
+        self.ch = ch
+        self.cl_num = cl_num
+
+        self.common_net = nn.Sequential(
+            ConvBlock(ch, ch, upsample=False, downsample=True),
+            ConvBlock(ch, ch, upsample=False, downsample=True),
+            ConvBlock(ch, ch, upsample=False, downsample=True),
+        )
+        self.aux_c = nn.Linear(4 * 4 * ch, self.cl_num)
+
+    def forward(self, input0):
+        input = self.common_net(input0)
+        input = input.view(-1, 4 * 4 * self.ch)
+        output_c = self.aux_c(input)
+        return output_c
+
+
+class RES_AuxClassifier(nn.Module):
+    def __init__(self, i_dim, cl_num, do_num, ch=64):
+        super(RES_AuxClassifier, self).__init__()
+        self.i_dim = i_dim
+        self.ch = ch
+        self.cl_num = cl_num
+        self.do_num = do_num
+
+        self.common_net = nn.Sequential(
+            ConvBlock(ch, ch, upsample=False, downsample=True),
+            ConvBlock(ch, ch, upsample=False, downsample=True),
+            ConvBlock(ch, ch, upsample=False, downsample=True),
+        )
+        self.aux_c = nn.Linear(4 * 4 * ch, self.cl_num)
+        self.aux_d = nn.Linear(4 * 4 * ch, self.do_num)
+        self.aux_c_tw = nn.Linear(4 * 4 * ch, self.cl_num)
+        self.aux_d_tw = nn.Linear(4 * 4 * ch, self.do_num)
+        self.disc = nn.Linear(4 * 4 * ch, 1)
+        self.cls = RES_Classifier(i_dim, cl_num, ch)
+
+    def forward(self, input0):
+        input = self.common_net(input0)
+        input = input.view(-1, 4 * 4 * self.ch)
+        output_c = self.aux_c(input)
+        output_c_tw = self.aux_c_tw(input)
+        output_d = self.aux_d(input)
+        output_d_tw = self.aux_d_tw(input)
+        output_disc = self.disc(input)
+        output_cls = self.cls(input0)
         return output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc
