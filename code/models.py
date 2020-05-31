@@ -751,6 +751,7 @@ class CNN_Classifier(nn.Module):
         super(CNN_Classifier, self).__init__()
         self.i_dim = i_dim
         self.ch = ch
+        self.cl_num = cl_num
 
         self.common_net = nn.Sequential(
             nn.Conv2d(i_dim, ch, 4, 2, 1),
