@@ -88,13 +88,13 @@ def run(config):
                            'root': join(config['data_root'], config['dataset']), 'num_train': config['num_train'],
                            'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim'],
                            'dim_d': config['dim_d'], 'dag_mat_file': config['dag_mat_file'], 'useMB': config['useMB'],
-                           'tar_id': config['tar_id']}
+                           'tar_id': config['tar_id'], 'resolution': config['resolution']}
     train_loader = utils.get_data_loader(train_dataset_specs, batch_size, config['num_workers'])
     test_dataset_specs = {'class_name': config['dataset'], 'seed': config['seed'], 'train': False,
                           'root': join(config['data_root'], config['dataset']), 'num_train': config['num_train'],
                           'num_domain': config['num_domain'], 'num_class': config['num_class'], 'dim': config['idim'],
                           'dim_d': config['dim_d'], 'dag_mat_file': config['dag_mat_file'], 'useMB': config['useMB'],
-                          'tar_id': config['tar_id']}
+                          'tar_id': config['tar_id'], 'resolution': config['resolution']}
     test_loader = utils.get_data_loader(test_dataset_specs, batch_size, config['num_workers'])
 
     # training

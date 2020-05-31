@@ -627,54 +627,54 @@ class PDAG_Generator(nn.Module):
         return result
 
 
-# ch: channel, set by mlp_nodes
-# i_dim: input image channels
-class CNN_Classifier(nn.Module):
-    def __init__(self, i_dim, cl_num, ch):
-        super(CNN_Classifier, self).__init__()
-        self.i_dim = i_dim
-        self.ch = ch
-        self.cl_num = cl_num
-
-        self.classifier = nn.Sequential(
-            nn.Conv2d(3, ch, 3, 1, 1),
-            nn.BatchNorm2d(ch, momentum=0.99),
-            nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(ch, ch, 3, 1, 1),
-            # nn.BatchNorm2d(ch, momentum=0.99),
-            # nn.LeakyReLU(negative_slope=0.1),
-            nn.Conv2d(ch, ch, 3, 1, 1),
-            nn.BatchNorm2d(ch, momentum=0.99),
-            nn.LeakyReLU(negative_slope=0.1),
-            nn.MaxPool2d(2),
-            nn.Dropout2d(0.5),
-            nn.Conv2d(ch, ch, 3, 1, 1),
-            nn.BatchNorm2d(ch, momentum=0.99),
-            nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(ch, ch, 3, 1, 1),
-            # nn.BatchNorm2d(ch, momentum=0.99),
-            # nn.LeakyReLU(negative_slope=0.1),
-            nn.Conv2d(ch, ch, 3, 1, 1),
-            nn.BatchNorm2d(ch, momentum=0.99),
-            nn.LeakyReLU(negative_slope=0.1),
-            nn.MaxPool2d(2),
-            nn.Dropout2d(0.5),
-            nn.Conv2d(ch, ch, 3, 1, 1),
-            nn.BatchNorm2d(ch, momentum=0.99),
-            nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(ch, ch, 3, 1, 1),
-            # nn.BatchNorm2d(ch, momentum=0.99),
-            # nn.LeakyReLU(negative_slope=0.1),
-            nn.Conv2d(ch, ch, 3, 1, 1),
-            nn.BatchNorm2d(ch, momentum=0.99),
-            nn.LeakyReLU(negative_slope=0.1),
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(ch, cl_num, 1)
-        )
-
-    def forward(self, x):
-        logits = self.classifier(x)
-        return logits.view(x.size(0), 10)
+# # ch: channel, set by mlp_nodes
+# # i_dim: input image channels
+# class CNN_Classifier(nn.Module):
+#     def __init__(self, i_dim, cl_num, ch):
+#         super(CNN_Classifier, self).__init__()
+#         self.i_dim = i_dim
+#         self.ch = ch
+#         self.cl_num = cl_num
+#
+#         self.classifier = nn.Sequential(
+#             nn.Conv2d(3, ch, 3, 1, 1),
+#             nn.BatchNorm2d(ch, momentum=0.99),
+#             nn.LeakyReLU(negative_slope=0.1),
+#             # nn.Conv2d(ch, ch, 3, 1, 1),
+#             # nn.BatchNorm2d(ch, momentum=0.99),
+#             # nn.LeakyReLU(negative_slope=0.1),
+#             nn.Conv2d(ch, ch, 3, 1, 1),
+#             nn.BatchNorm2d(ch, momentum=0.99),
+#             nn.LeakyReLU(negative_slope=0.1),
+#             nn.MaxPool2d(2),
+#             nn.Dropout2d(0.5),
+#             nn.Conv2d(ch, ch, 3, 1, 1),
+#             nn.BatchNorm2d(ch, momentum=0.99),
+#             nn.LeakyReLU(negative_slope=0.1),
+#             # nn.Conv2d(ch, ch, 3, 1, 1),
+#             # nn.BatchNorm2d(ch, momentum=0.99),
+#             # nn.LeakyReLU(negative_slope=0.1),
+#             nn.Conv2d(ch, ch, 3, 1, 1),
+#             nn.BatchNorm2d(ch, momentum=0.99),
+#             nn.LeakyReLU(negative_slope=0.1),
+#             nn.MaxPool2d(2),
+#             nn.Dropout2d(0.5),
+#             nn.Conv2d(ch, ch, 3, 1, 1),
+#             nn.BatchNorm2d(ch, momentum=0.99),
+#             nn.LeakyReLU(negative_slope=0.1),
+#             # nn.Conv2d(ch, ch, 3, 1, 1),
+#             # nn.BatchNorm2d(ch, momentum=0.99),
+#             # nn.LeakyReLU(negative_slope=0.1),
+#             nn.Conv2d(ch, ch, 3, 1, 1),
+#             nn.BatchNorm2d(ch, momentum=0.99),
+#             nn.LeakyReLU(negative_slope=0.1),
+#             nn.AdaptiveAvgPool2d(1),
+#             nn.Conv2d(ch, cl_num, 1)
+#         )
+#
+#     def forward(self, x):
+#         logits = self.classifier(x)
+#         return logits.view(x.size(0), 10)
 
 
 # class CNN_AuxClassifier(nn.Module):
@@ -746,6 +746,32 @@ class CNN_Classifier(nn.Module):
 #         return output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc
 
 
+class CNN_Classifier(nn.Module):
+    def __init__(self, i_dim, cl_num, ch):
+        super(CNN_Classifier, self).__init__()
+        self.i_dim = i_dim
+        self.ch = ch
+
+        self.common_net = nn.Sequential(
+            nn.Conv2d(i_dim, ch, 4, 2, 1),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(ch, ch, 4, 2, 1),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(ch, ch, 3, 2, 1),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(4 * 4 * ch, self.cl_num)
+        )
+
+    def forward(self, input0):
+        input = self.common_net(input0)
+        input = input.view(-1, 4 * 4 * self.ch)
+        output_c = self.aux_c(input)
+        return output_c
+
+
 class CNN_AuxClassifier(nn.Module):
     def __init__(self, i_dim, cl_num, do_num, ch=64):
         super(CNN_AuxClassifier, self).__init__()
@@ -753,7 +779,6 @@ class CNN_AuxClassifier(nn.Module):
         self.ch = ch
         self.cl_num = cl_num
         self.do_num = do_num
-        self.cls = CNN_Classifier(i_dim, cl_num, ch)
 
         self.common_net = nn.Sequential(
             nn.Conv2d(i_dim, ch, 4, 2, 1),
