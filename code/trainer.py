@@ -10,6 +10,7 @@ import utils
 import numpy as np
 from mmd import *
 from os.path import join
+import torch.autograd as autograd
 
 
 # DA baseline, pool neural network
@@ -552,13 +553,36 @@ class DA_Infer_AC_Adv(object):
         )
         aux_loss_c1 = self.aux_loss_func(output_c1, y_a[:, 0])
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
-        errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1)
+
+        gradient_penalty = self.calc_gradient_penalty(self.dis, x_a, fake_x_a.detah())
+        errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1) + gradient_penalty
 
         errD.backward()
         self.dis_opt.step()
         self.aux_loss_c1 = aux_loss_c1
         self.aux_loss_d1 = aux_loss_d1
         self.gan_loss = gan_loss
+
+    def calc_gradient_penalty(self, real_data, fake_data):
+        batch_size = real_data.size(0)
+        alpha = torch.rand(batch_size, 1, 1, 1)
+        alpha = alpha.expand(real_data.size())
+        alpha = alpha.cuda()
+
+        interpolates = alpha * real_data + ((1 - alpha) * fake_data)
+        interpolates = autograd.Variable(interpolates, requires_grad=True)
+
+        _, _, _, _, disc_interpolates = self.dis(interpolates)
+
+        witness = torch.exp(disc_interpolates[:, 0]) / torch.sum(torch.exp(disc_interpolates), dim=1)
+
+        gradients = autograd.grad(outputs=witness, inputs=interpolates,
+                                  grad_outputs=torch.ones(witness.size()).cuda(),
+                                  create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+        gradients = gradients.view(batch_size, -1)
+        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        return gradient_penalty
 
     def resume(self, snapshot_prefix):
             gen_filename = snapshot_prefix + '_gen.pkl'
