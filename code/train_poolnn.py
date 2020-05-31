@@ -1,5 +1,5 @@
 """
-Domain Adaptation as a Problem of Inference on Graphical Models, learned graph
+Domain Adaptation as a Problem of Inference on Graphical Models, baseline poolnn
 """
 from __future__ import print_function
 import sys

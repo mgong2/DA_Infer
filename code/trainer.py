@@ -11,6 +11,7 @@ import numpy as np
 from mmd import *
 from os.path import join
 import torch.autograd as autograd
+from gan_losses import generator_loss, discriminator_loss
 
 
 # DA baseline, pool neural network
@@ -26,6 +27,8 @@ class DA_Poolnn(object):
             self.dis = MLP_Classifier(input_dim, num_class, num_layer, num_nodes)
         if config['D_model'] == 'CNN_Classifier':
             self.dis = CNN_Classifier(input_dim, num_class, num_nodes)
+        if config['D_model'] == 'UNIT_Classifier':
+            self.dis = UNIT_Classifier(input_dim, num_class, num_nodes)
 
         # set optimizers
         self.dis_opt = torch.optim.Adam(self.dis.parameters(), lr=config['D_lr'], betas=(config['D_B1'], config['D_B2']))
@@ -442,11 +445,20 @@ class DA_Infer_TAC_Adv(object):
         if config['G_model'] == 'CNN_Generator' and config['estimate'] == 'Bayesian':
             self.gen = CNN_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
                                      num_nodes, prob=True)
+        if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'ML':
+            self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                      num_nodes, prob=False)
+        if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'Bayesian':
+            self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                      num_nodes, prob=True)
+
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_AuxClassifier':
             self.dis = MLP_AuxClassifier(input_dim, num_class, num_domain, num_layer, num_nodes, is_reg)
         if config['D_model'] == 'CNN_AuxClassifier':
             self.dis = CNN_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
+        if config['D_model'] == 'UNIT_AuxClassifier':
+            self.dis = UNIT_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
 
         # set optimizers
         self.gen_opt = torch.optim.Adam(self.gen.parameters(), lr=config['G_lr'], betas=(config['G_B1'], config['G_B2']))
@@ -657,11 +669,20 @@ class DA_Infer_AC_Adv(object):
         if config['G_model'] == 'CNN_Generator' and config['estimate'] == 'Bayesian':
             self.gen = CNN_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
                                      num_nodes, prob=True)
+        if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'ML':
+            self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                     num_nodes, prob=False)
+        if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'Bayesian':
+            self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                     num_nodes, prob=True)
+
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_AuxClassifier':
             self.dis = MLP_AuxClassifier(input_dim, num_class, num_domain, num_layer, num_nodes, is_reg)
         if config['D_model'] == 'CNN_AuxClassifier':
             self.dis = CNN_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
+        if config['D_model'] == 'UNIT_AuxClassifier':
+            self.dis = UNIT_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
 
         # set optimizers
         self.gen_opt = torch.optim.Adam(self.gen.parameters(), lr=config['G_lr'], betas=(config['G_B1'], config['G_B2']))
@@ -718,7 +739,7 @@ class DA_Infer_AC_Adv(object):
         lambda_c = config['AC_weight']
         lambda_tar = config['TAR_weight']
         # gan_loss = self.sigmoid_xent(output_disc, torch.ones_like(output_disc, device=device))
-        gan_loss = - output_disc.mean()
+        gan_loss = generator_loss(output_disc)
         aux_loss_c = self.aux_loss_func(output_c[ids_s], y_a[ids_s, 0])
         aux_loss_d = self.aux_loss_func(output_d, y_a[:, 1])
         aux_loss_cls = self.aux_loss_func(output_cls[ids_t], y_a[ids_t, 0])
@@ -773,7 +794,8 @@ class DA_Infer_AC_Adv(object):
         #         self.sigmoid_xent(output_disc1, torch.ones_like(output_disc1, device=device)) +
         #         self.sigmoid_xent(output_disc, torch.zeros_like(output_disc, device=device))
         # )
-        gan_loss = output_disc.mean() - output_disc1.mean()
+        # gan_loss = output_disc.mean() - output_disc1.mean()
+        gan_loss = discriminator_loss(output_disc1, output_disc)
         aux_loss_c1 = self.aux_loss_func(output_c1[ids_s], y_a[ids_s, 0])
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
         aux_loss_cls = self.aux_loss_func(output_cls[ids_t], y_a[ids_t, 0])

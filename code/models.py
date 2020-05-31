@@ -6,6 +6,7 @@ import torch.nn as nn
 import numpy as np
 from collections import defaultdict
 import itertools
+import torch.nn.utils.spectral_norm as sn
 
 
 #  mlp model
@@ -796,7 +797,7 @@ class CNN_AuxClassifier(nn.Module):
         self.aux_d = nn.Linear(4 * 4 * ch, self.do_num)
         self.aux_c_tw = nn.Linear(4 * 4 * ch, self.cl_num)
         self.aux_d_tw = nn.Linear(4 * 4 * ch, self.do_num)
-        self.disc = nn.Linear(4 * 4 * ch, self.do_num)
+        self.disc = nn.Linear(4 * 4 * ch, 1)
         self.cls = CNN_Classifier(i_dim, cl_num, ch)
 
     def forward(self, input0):
@@ -860,3 +861,132 @@ class CNN_Generator(nn.Module):
             return output, -KL_reg
         else:
             return output
+
+
+# a CNN generator
+class UNIT_Generator(nn.Module):
+    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, ch=64, prob=True):
+        super(UNIT_Generator, self).__init__()
+        self.prob = prob
+        self.do_dim = do_dim
+        self.ch = ch
+        if prob:
+            # VAE posterior parameters, Gaussian
+            self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
+            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
+        else:
+            self.ld = nn.Linear(do_num, do_dim, bias=False)
+        self.lc = nn.Linear(cl_num, cl_dim, bias=False)
+
+        self.decoder = nn.Sequential(
+            sn(nn.ConvTranspose2d(z_dim + cl_dim + do_dim, ch * 4, kernel_size=4, stride=2, padding=0)),
+            nn.BatchNorm2d(ch * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.ConvTranspose2d(ch * 4, ch, kernel_size=4, stride=2, padding=1)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.ConvTranspose2d(ch, i_dim, kernel_size=1, stride=1, padding=0)),
+            nn.Tanh()
+        )
+
+    def forward(self, noise, input_c, input_d, noise_d=None):
+        embed_c = self.lc(input_c)
+        if self.prob:
+            theta = self.mu + torch.mul(self.sigma, noise_d)
+            embed_d = torch.matmul(input_d, theta)
+        else:
+            embed_d = self.ld(input_d)
+        z = torch.cat((embed_c, noise, embed_d), axis=1)
+        z = z.view(z.size(0), z.size(1), 1, 1)
+        output = self.decoder(z)
+        if self.prob:
+            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            if KL_reg.shape[1] > 1:
+                KL_reg = KL_reg.sum(axis=1)
+            return output, -KL_reg
+        else:
+            return output
+
+
+class UNIT_Classifier(nn.Module):
+    def __init__(self, i_dim, cl_num, ch):
+        super(UNIT_Classifier, self).__init__()
+        self.i_dim = i_dim
+        self.ch = ch
+        self.cl_num = cl_num
+
+        self.common_net = nn.Sequential(
+            sn(nn.Conv2d(i_dim, ch, 5, 1, 2)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            sn(nn.Conv2d(ch, cl_num, 2, 1, 0)),
+        )
+
+    def forward(self, input0):
+        input = self.common_net(input0)
+        output_c = input.view(-1, self.cl_num)
+        return output_c
+
+
+class UNIT_AuxClassifier(nn.Module):
+    def __init__(self, i_dim, cl_num, do_num, ch=64):
+        super(UNIT_AuxClassifier, self).__init__()
+        self.i_dim = i_dim
+        self.ch = ch
+        self.cl_num = cl_num
+        self.do_num = do_num
+
+        self.common_net = nn.Sequential(
+            sn(nn.Conv2d(i_dim, ch, 5, 1, 2)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.BatchNorm2d(ch),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+        )
+        self.aux_c = sn(nn.Conv2d(ch, cl_num, 2, 1, 0))
+        self.aux_d = sn(nn.Conv2d(ch, do_num, 2, 1, 0))
+        self.aux_c_tw = sn(nn.Conv2d(ch, cl_num, 2, 1, 0))
+        self.aux_d_tw = sn(nn.Conv2d(ch, do_num, 2, 1, 0))
+        self.disc = sn(nn.Conv2d(ch, 1, 2, 1, 0))
+        self.cls = UNIT_Classifier(i_dim, cl_num, ch)
+
+    def forward(self, input0):
+        input = self.common_net(input0)
+        output_c = self.aux_c(input).view(-1, self.cl_num)
+        output_c_tw = self.aux_c_tw(input).view(-1, self.cl_num)
+        output_d = self.aux_d(input).view(-1, self.do_num)
+        output_d_tw = self.aux_d_tw(input).view(-1, self.do_num)
+        output_disc = self.disc(input).view(-1, 1)
+        output_cls = self.cls(input0)
+
+        return output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc

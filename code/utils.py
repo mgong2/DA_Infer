@@ -89,7 +89,7 @@ def prepare_parser():
         help='warmp up epochs training in the source domain'
              '(default: %(default)s)')
     parser.add_argument(
-        '--gp', action='store_false',
+        '--gp', action='store_true',
         help='is regression?: %(default)s)')
 
     ### Model stuff ###

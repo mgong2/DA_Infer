@@ -1,5 +1,5 @@
 """
-Domain Adaptation as a Problem of Inference on Graphical Models y->X
+Domain Adaptation as a Problem of Inference on Graphical Models
 """
 from __future__ import print_function
 import sys
