@@ -83,7 +83,7 @@ class DatasetDigits4(data.Dataset):
         labels = self.label[self.order[self.tar_id][yd]][index1]
         img_pp = self.pre_process(img)
         imgr = self.transforms_train(img_pp)
-        label = torch.LongTensor([labels, yd[0]])
+        label = torch.LongTensor([labels, yd])
         return imgr, label
 
     def __len__(self):
