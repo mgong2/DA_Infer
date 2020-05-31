@@ -504,15 +504,17 @@ class DA_Infer_TAC_Adv(object):
         lambda_tar = config['TAR_weight']
         # gan_loss = self.sigmoid_xent(output_disc, torch.ones_like(output_disc, device=device))
         gan_loss = - output_disc.mean()
-        aux_loss_c = self.aux_loss_func(output_c, y_a[:, 0])
+        aux_loss_c = self.aux_loss_func(output_c[ids_s], y_a[ids_s, 0])
         aux_loss_d = self.aux_loss_func(output_d, y_a[:, 1])
-        aux_loss_ct = self.aux_loss_func(output_c_tw, y_a[:, 0])
+        aux_loss_ct = self.aux_loss_func(output_c_tw[ids_s], y_a[ids_s, 0])
         aux_loss_dt = self.aux_loss_func(output_d_tw, y_a[:, 1])
+        aux_loss_cls = self.aux_loss_func(output_c[ids_t], y_a[ids_t, 0])
 
+        lambda_tar = 0
         if config['estimate'] == 'ML':
-            errG = gan_loss + lambda_c * (aux_loss_c - aux_loss_ct + aux_loss_d - aux_loss_dt)
+            errG = gan_loss + lambda_c * (aux_loss_c - aux_loss_ct + aux_loss_d - aux_loss_dt + lambda_tar * aux_loss_cls)
         elif config['estimate'] == 'Bayesian':
-            errG = gan_loss + lambda_c * (aux_loss_c - aux_loss_ct + aux_loss_d - aux_loss_dt) + torch.dot(1.0/do_ss.to(device).squeeze(), KL_reg.squeeze())
+            errG = gan_loss + lambda_c * (aux_loss_c - aux_loss_ct + aux_loss_d - aux_loss_dt + lambda_tar * aux_loss_cls) + torch.dot(1.0/do_ss.to(device).squeeze(), KL_reg.squeeze())
 
         errG.backward()
         self.gen_opt.step()
@@ -557,8 +559,8 @@ class DA_Infer_TAC_Adv(object):
         #         self.sigmoid_xent(output_disc, torch.zeros_like(output_disc, device=device))
         # )
         gan_loss = output_disc.mean() - output_disc1.mean()
-        aux_loss_c1 = self.aux_loss_func(output_c1, y_a[:, 0])
-        aux_loss_ct = self.aux_loss_func(output_c_tw, y_a[:, 0])
+        aux_loss_c1 = self.aux_loss_func(output_c1[ids_s], y_a[ids_s, 0])
+        aux_loss_ct = self.aux_loss_func(output_c_tw[ids_s], y_a[ids_s, 0])
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
         aux_loss_dt = self.aux_loss_func(output_d_tw, y_a[:, 1])
 
@@ -703,7 +705,7 @@ class DA_Infer_AC_Adv(object):
         lambda_tar = config['TAR_weight']
         # gan_loss = self.sigmoid_xent(output_disc, torch.ones_like(output_disc, device=device))
         gan_loss = - output_disc.mean()
-        aux_loss_c = self.aux_loss_func(output_c, y_a[:, 0])
+        aux_loss_c = self.aux_loss_func(output_c[ids_s], y_a[ids_s, 0])
         aux_loss_d = self.aux_loss_func(output_d, y_a[:, 1])
 
         if config['estimate'] == 'ML':
@@ -752,7 +754,7 @@ class DA_Infer_AC_Adv(object):
         #         self.sigmoid_xent(output_disc, torch.zeros_like(output_disc, device=device))
         # )
         gan_loss = output_disc.mean() - output_disc1.mean()
-        aux_loss_c1 = self.aux_loss_func(output_c1, y_a[:, 0])
+        aux_loss_c1 = self.aux_loss_func(output_c1[ids_s], y_a[ids_s, 0])
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
 
         if config['gp']:
