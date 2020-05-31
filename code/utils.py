@@ -280,6 +280,8 @@ def get_data_loader(conf, batch_size, num_workers):
         dataset = DatasetMNISTR4(conf)
     elif conf['class_name'] == 'DatasetDigits4':
         dataset = DatasetDigits4(conf)
+    elif conf['class_name'] == 'DatasetFlow3':
+        dataset = DatasetFlow3(conf)
     else:
         dataset = None
     return torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
