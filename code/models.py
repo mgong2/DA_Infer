@@ -1079,7 +1079,7 @@ class RES_Generator(nn.Module):
             nn.Linear(z_dim + cl_dim + do_dim, ch * 4 * 4),
         )
         self.decoder = nn.Sequential(
-            ConvBlock(ch, ch),
+            ConvBlock(i_dim, ch),
             ConvBlock(ch, ch),
             ConvBlock(ch, ch),
             nn.Tanh()
@@ -1135,7 +1135,7 @@ class RES_AuxClassifier(nn.Module):
         self.do_num = do_num
 
         self.common_net = nn.Sequential(
-            ConvBlock(ch, ch, upsample=False, downsample=True),
+            ConvBlock(i_dim, ch, upsample=False, downsample=True),
             ConvBlock(ch, ch, upsample=False, downsample=True),
             ConvBlock(ch, ch, upsample=False, downsample=True),
         )
