@@ -755,13 +755,13 @@ class CNN_Classifier(nn.Module):
         self.cl_num = cl_num
 
         self.common_net = nn.Sequential(
-            nn.Conv2d(i_dim, ch, 4, 2, 1),
+            sn(nn.Conv2d(i_dim, ch, 4, 2, 1)),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(ch, ch, 4, 2, 1),
+            sn(nn.Conv2d(ch, ch, 4, 2, 1)),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(ch, ch, 3, 2, 1),
+            sn(nn.Conv2d(ch, ch, 3, 2, 1)),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
         )
@@ -783,15 +783,15 @@ class CNN_AuxClassifier(nn.Module):
         self.do_num = do_num
 
         self.common_net = nn.Sequential(
-            nn.Conv2d(i_dim, ch, 4, 2, 1),
+            sn(nn.Conv2d(i_dim, ch, 4, 2, 1)),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(ch, ch, 4, 2, 1),
+            sn(nn.Conv2d(ch, ch, 4, 2, 1)),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(ch, ch, 3, 2, 1),
+            sn(nn.Conv2d(ch, ch, 3, 2, 1)),
             nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.LeakyReLU(0.2, inplace=True),
         )
         self.aux_c = nn.Linear(4 * 4 * ch, self.cl_num)
         self.aux_d = nn.Linear(4 * 4 * ch, self.do_num)
@@ -829,18 +829,18 @@ class CNN_Generator(nn.Module):
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
 
         self.decoder1 = nn.Sequential(
-            nn.Linear(z_dim + cl_dim + do_dim, ch * 4 * 4),
+            sn(nn.Linear(z_dim + cl_dim + do_dim, ch * 4 * 4)),
             nn.BatchNorm1d(ch * 4 * 4),
             nn.ReLU(True),
         )
         self.decoder2 = nn.Sequential(
-            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
+            sn(nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1)),
             nn.BatchNorm2d(ch),
             nn.ReLU(True),
-            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
+            sn(nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1)),
             nn.BatchNorm2d(ch),
             nn.ReLU(True),
-            nn.ConvTranspose2d(ch, i_dim, kernel_size=4, stride=2, padding=1),
+            sn(nn.ConvTranspose2d(ch, i_dim, kernel_size=4, stride=2, padding=1)),
             nn.Tanh()
         )
 
