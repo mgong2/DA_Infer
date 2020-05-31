@@ -213,7 +213,7 @@ def run(config):
             elif config['estimate'] == 'Bayesian':
                 noise_d = torch.randn(num_domain, config['dim_d']).to(device)
                 fake_img, _ = trainer.gen(fixed_noise, label_fixed, label_d_onehot, noise_d)
-        img_name = os.path.join(config['samples_root'],  + experiment_name + '_ep%d_gen.jpg' % ep)
+        img_name = os.path.join(config['samples_root'],  + experiment_name + '_gen.jpg')
         torchvision.utils.save_image(fake_img.mul(0.5).add(0.5), img_name, nrow=10)
         trainer.gen.train()
 
