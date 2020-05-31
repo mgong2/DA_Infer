@@ -555,7 +555,7 @@ class DA_Infer_AC_Adv(object):
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
 
         if config['gp']:
-            gradient_penalty = self.calc_gradient_penalty(self.dis, x_a, fake_x_a.detach())
+            gradient_penalty = self.calc_gradient_penalty(x_a, fake_x_a.detach())
             errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1) + gradient_penalty
         else:
             errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1)
