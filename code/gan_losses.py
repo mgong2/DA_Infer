@@ -6,7 +6,7 @@ import torch.nn.functional as F
 def loss_dcgan_dis(dis_fake, dis_real):
     L1 = torch.mean(F.softplus(-dis_real))
     L2 = torch.mean(F.softplus(dis_fake))
-    return L1, L2
+    return L1 + L2
 
 
 def loss_dcgan_gen(dis_fake):
@@ -38,5 +38,5 @@ def loss_hinge_gen(dis_fake):
 
 
 # Default to hinge loss
-generator_loss = loss_hinge_gen
-discriminator_loss = loss_hinge_dis
+generator_loss = loss_dcgan_gen
+discriminator_loss = loss_dcgan_dis
