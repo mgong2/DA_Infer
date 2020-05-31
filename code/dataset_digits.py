@@ -26,7 +26,7 @@ class DatasetDigits4(data.Dataset):
         self.order = [[1, 2, 3, 0], [0, 2, 3, 1], [0, 1, 3, 2], [0, 1, 2, 3]]
 
         if self.train:
-            self.y_d = np.repeat(np.arange(self.num_domain), self.num_train).T.reshape(self.num_train * self.num_domain, 1)
+            self.y_d = np.repeat(np.arange(self.num_domain), self.num_train).T.reshape(self.num_train * self.num_domain, 1).squeeze()
             img_mnist, label_mnist = torch.load(join(self.root, 'mnist_train.pt'))
             img_mnist_m, label_mnist_m = torch.load(join(self.root, 'mnist_m_train.pt'))
             img_svhn, label_svhn = torch.load(join(self.root, 'svhn_train.pt'))
@@ -79,8 +79,8 @@ class DatasetDigits4(data.Dataset):
             index1 = np.random.randint(self.num_train)
         else:
             index1 = np.random.randint(self.num_test)
-        img = self.data[self.order[self.tar_id][yd[0]]][index1]
-        labels = self.label[self.order[self.tar_id][yd[0]]][index1]
+        img = self.data[self.order[self.tar_id][yd]][index1]
+        labels = self.label[self.order[self.tar_id][yd]][index1]
         img_pp = self.pre_process(img)
         imgr = self.transforms_train(img_pp)
         label = torch.LongTensor([labels, yd[0]])
