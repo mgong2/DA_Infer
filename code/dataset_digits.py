@@ -44,7 +44,7 @@ class DatasetDigits4(data.Dataset):
             self.data = data_train
             self.label = label_train
         else:
-            self.y_d = np.ones(self.num_test) * (self.num_domain-1)
+            self.y_d = np.ones(self.num_test, dtype=np.int64) * (self.num_domain-1)
             img_mnist, label_mnist = torch.load(join(self.root, 'mnist_test.pt'))
             img_mnist_m, label_mnist_m = torch.load(join(self.root, 'mnist_m_test.pt'))
             img_svhn, label_svhn = torch.load(join(self.root, 'svhn_test.pt'))
