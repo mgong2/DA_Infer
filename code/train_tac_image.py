@@ -123,8 +123,8 @@ def run(config):
     # fixed noise for illustration
     fixed_noise = torch.randn(100, dim_z, device=device)
     label_gpu = torch.zeros(100, device=device, dtype=torch.int64)
-    for i in range(10):
-        label_gpu[i * 10:(i + 1) * 10] = i
+    for i in range(num_class):
+        label_gpu[i * num_class:(i + 1) * num_class] = i
     label_fixed = label_gpu.repeat(num_domain)
     y_onehot = torch.nn.functional.one_hot(label_fixed, num_class).float()
     label_fixed = y_onehot
@@ -194,6 +194,22 @@ def run(config):
 
             iterations += 1
             state_dict['iterations'] = iterations
+
+            one = torch.ones(100, 1, device=device, dtype=torch.int64)
+            label_d = one * 0
+            for i in range(1, num_domain):
+                label_d = torch.cat((label_d, one * i))
+            label_d_onehot = torch.nn.functional.one_hot(label_d.squeeze(), num_domain).float()
+            trainer.gen.eval()
+            with torch.no_grad():
+                if config['estimate'] == 'ML':
+                    fake_img = trainer.gen(fixed_noise, label_fixed, label_d_onehot)
+                elif config['estimate'] == 'Bayesian':
+                    noise_d = torch.randn(num_domain, config['dim_d']).to(device)
+                    fake_img, _ = trainer.gen(fixed_noise, label_fixed, label_d_onehot, noise_d)
+            img_name = os.path.join(config['samples_root'], experiment_name + "_gen.jpg")
+            torchvision.utils.save_image(fake_img.mul(0.5).add(0.5), img_name, nrow=10)
+            trainer.gen.train()
 
         # print variational parameters
         if config['estimate'] == 'Bayesian':
