@@ -87,6 +87,9 @@ def prepare_parser():
         '--warmup', type=int, default=200,
         help='warmp up epochs training in the source domain'
              '(default: %(default)s)')
+    parser.add_argument(
+        '--gp', action='store_false',
+        help='is regression?: %(default)s)')
 
     ### Model stuff ###
     parser.add_argument(
@@ -243,6 +246,7 @@ def name_from_config(config):
             config['train_mode'],
             config['estimate'],
             'warmup%d' % config['warmup'],
+            'gp%d' % config['gp'],
             config['G_model'],
             config['D_model'],
             'Diter%d' % config['num_D_steps'],
