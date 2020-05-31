@@ -1081,7 +1081,7 @@ class RES_Generator(nn.Module):
         self.decoder = nn.Sequential(
             ConvBlock(ch, ch),
             ConvBlock(ch, ch),
-            ConvBlock(ch, ch),
+            ConvBlock(ch, i_dim),
             nn.Tanh()
         )
 
