@@ -555,8 +555,8 @@ class DA_Infer_AC_Adv(object):
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
 
         if config['gp']:
-            gradient_penalty = self.calc_gradient_penalty(x_a, fake_x_a.detach())
-            errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1) + gradient_penalty
+            gradient_penalty = self.calc_gradient_penalty(x_a, fake_x_a.detach(), device=device)
+            errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1) + 10 * gradient_penalty
         else:
             errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1)
 
@@ -566,21 +566,21 @@ class DA_Infer_AC_Adv(object):
         self.aux_loss_d1 = aux_loss_d1
         self.gan_loss = gan_loss
 
-    def calc_gradient_penalty(self, real_data, fake_data):
+    def calc_gradient_penalty(self, real_data, fake_data, device):
         batch_size = real_data.size(0)
         alpha = torch.rand(batch_size, 1, 1, 1)
         alpha = alpha.expand(real_data.size())
-        alpha = alpha.cuda()
+        alpha = alpha.to(device)
 
         interpolates = alpha * real_data + ((1 - alpha) * fake_data)
         interpolates = autograd.Variable(interpolates, requires_grad=True)
 
         _, _, _, _, disc_interpolates = self.dis(interpolates)
 
-        witness = torch.exp(disc_interpolates[:, 0]) / torch.sum(torch.exp(disc_interpolates), dim=1)
-
+        # witness = torch.exp(disc_interpolates) / torch.sum(torch.exp(disc_interpolates), dim=1)
+        witness = disc_interpolates
         gradients = autograd.grad(outputs=witness, inputs=interpolates,
-                                  grad_outputs=torch.ones(witness.size()).cuda(),
+                                  grad_outputs=torch.ones(witness.size()).to(device),
                                   create_graph=True, retain_graph=True, only_inputs=True)[0]
 
         gradients = gradients.view(batch_size, -1)
