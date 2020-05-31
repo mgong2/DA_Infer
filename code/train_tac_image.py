@@ -27,7 +27,8 @@ def test_acc(model, test_loader, device):
         for data, target in test_loader:
             data, target = data.to(device), target.to(device).view(data.size(0), 2)
             # output_tac, _, _, _, output_ac = model(data) # output_tac is actually output_cls !!
-            _, _, _, _, output_ac, _ = model(data) # output_tac is actually output_cls !!
+            # _, _, _, _, output_ac, _ = model(data) # output_tac is actually output_cls !!
+            output_ac, _, _, _, _ = model(data) # output_tac is actually output_cls !!
             test_loss_ac += F.nll_loss(output_ac, target[:, 0]).sum().item()  # sum up batch loss
             pred_ac = output_ac.max(1, keepdim=True)[1]  # get the index of the max log-probability
             correct_ac += pred_ac.eq(target[:, 0].view_as(pred_ac)).sum().item()
@@ -139,14 +140,14 @@ def run(config):
     for ep in range(state_dict['epoch'], config['num_epochs']):
         state_dict['epoch'] = ep
 
-        # test_acc_target_c = test_acc(trainer.dis, test_loader, device=device)
-        # writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
-        # # writer.add_scalar('test_acc_target_tac', test_acc_target_ct, ep)
-        # if test_acc_target_c > best_score:
-        #     best_score = test_acc_target_c
-        #     state_dict['best_score'] = best_score
-        # if ep == config['num_epochs'] - 1:
-        #     state_dict['final_score'] = test_acc_target_c
+        test_acc_target_c = test_acc(trainer.dis, test_loader, device=device)
+        writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
+        # writer.add_scalar('test_acc_target_tac', test_acc_target_ct, ep)
+        if test_acc_target_c > best_score:
+            best_score = test_acc_target_c
+            state_dict['best_score'] = best_score
+        if ep == config['num_epochs'] - 1:
+            state_dict['final_score'] = test_acc_target_c
 
         for it, (x, y) in enumerate(train_loader):
             if x.size(0) != batch_size:
