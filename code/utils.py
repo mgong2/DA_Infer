@@ -245,6 +245,7 @@ def name_from_config(config):
             'warmup%d' % config['warmup'],
             config['G_model'],
             config['D_model'],
+            'Diter%d' % config['num_D_steps'],
             'AC_weight%3.2f' % config['AC_weight'],
             'SRC_weight%3.2f' % config['SRC_weight'],
             'TAR_weight%3.2f' % config['TAR_weight'],
