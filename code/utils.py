@@ -269,8 +269,10 @@ def get_data_loader(conf, batch_size, num_workers):
         dataset = DatasetFlow5(conf)
     elif conf['class_name'] == 'DatasetWifi':
         dataset = DatasetWifi(conf)
-    elif conf['class_name'] == 'DatasetMNISTR':
-        dataset = DatasetMNISTR(conf)
+    elif conf['class_name'] == 'DatasetMNISTR3':
+        dataset = DatasetMNISTR3(conf)
+    elif conf['class_name'] == 'DatasetMNISTR4':
+        dataset = DatasetMNISTR4(conf)
     else:
         dataset = None
     return torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
