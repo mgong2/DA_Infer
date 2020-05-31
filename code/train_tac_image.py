@@ -163,7 +163,7 @@ def run(config):
                     Giter = 0
 
             if Giter < Giters and Diter > Diters:
-                trainer.gen_update(x, y, config, device)
+                trainer.gen_update(x, y, config, state_dict, device)
                 Giter += 1
                 if Giter == Giters:
                     Diter = 0

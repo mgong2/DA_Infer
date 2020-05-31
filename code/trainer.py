@@ -472,7 +472,7 @@ class DA_Infer_TAC_Adv(object):
         self.gen.to(device)
         self.dis.to(device)
 
-    def gen_update(self, x_a, y_a, config, device='cpu'):
+    def gen_update(self, x_a, y_a, config, state, device='cpu'):
         for p in self.dis.parameters():
             p.requires_grad_(False)
         self.gen.zero_grad()
@@ -501,7 +501,6 @@ class DA_Infer_TAC_Adv(object):
         ids_t = y_a[:, 1] == num_domain - 1
 
         lambda_c = config['AC_weight']
-        lambda_tar = config['TAR_weight']
         # gan_loss = self.sigmoid_xent(output_disc, torch.ones_like(output_disc, device=device))
         gan_loss = - output_disc.mean()
         aux_loss_c = self.aux_loss_func(output_c[ids_s], y_a[ids_s, 0])
@@ -510,7 +509,11 @@ class DA_Infer_TAC_Adv(object):
         aux_loss_dt = self.aux_loss_func(output_d_tw, y_a[:, 1])
         aux_loss_cls = self.aux_loss_func(output_c[ids_t], y_a[ids_t, 0])
 
-        lambda_tar = 0
+        if state['epoch'] < config['warmup']:
+            lambda_tar = 0
+        else:
+            lambda_tar = config['TAR_weight']
+
         if config['estimate'] == 'ML':
             errG = gan_loss + lambda_c * (aux_loss_c - aux_loss_ct + aux_loss_d - aux_loss_dt + lambda_tar * aux_loss_cls)
         elif config['estimate'] == 'Bayesian':
@@ -673,7 +676,7 @@ class DA_Infer_AC_Adv(object):
         self.gen.to(device)
         self.dis.to(device)
 
-    def gen_update(self, x_a, y_a, config, device='cpu'):
+    def gen_update(self, x_a, y_a, config, state, device='cpu'):
         for p in self.dis.parameters():
             p.requires_grad_(False)
         self.gen.zero_grad()
@@ -707,11 +710,17 @@ class DA_Infer_AC_Adv(object):
         gan_loss = - output_disc.mean()
         aux_loss_c = self.aux_loss_func(output_c[ids_s], y_a[ids_s, 0])
         aux_loss_d = self.aux_loss_func(output_d, y_a[:, 1])
+        aux_loss_cls = self.aux_loss_func(output_c[ids_t], y_a[ids_t, 0])
+
+        if state['epoch'] < config['warmup']:
+            lambda_tar = 0
+        else:
+            lambda_tar = config['TAR_weight']
 
         if config['estimate'] == 'ML':
-            errG = gan_loss + lambda_c * (aux_loss_c + aux_loss_d)
+            errG = gan_loss + lambda_c * (aux_loss_c + aux_loss_d + lambda_tar * aux_loss_cls)
         elif config['estimate'] == 'Bayesian':
-            errG = gan_loss + lambda_c * (aux_loss_c + aux_loss_d) + torch.dot(1.0/do_ss.to(device).squeeze(), KL_reg.squeeze())
+            errG = gan_loss + lambda_c * (aux_loss_c + aux_loss_d + lambda_tar * aux_loss_cls) + torch.dot(1.0/do_ss.to(device).squeeze(), KL_reg.squeeze())
 
         errG.backward()
         self.gen_opt.step()
