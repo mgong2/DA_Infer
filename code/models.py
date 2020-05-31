@@ -763,8 +763,8 @@ class CNN_Classifier(nn.Module):
             nn.Conv2d(ch, ch, 3, 2, 1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(4 * 4 * ch, self.cl_num)
         )
+        self.aux_c = nn.Linear(4 * 4 * ch, self.cl_num)
 
     def forward(self, input0):
         input = self.common_net(input0)
