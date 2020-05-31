@@ -11,6 +11,7 @@ from dataset_simul import *
 from dataset_flow import *
 from dataset_wifi import *
 from dataset_mnistr import *
+from dataset_digits import *
 import torch.nn as nn
 
 ## Default value set for dataset flow and DA_Infer_MMD trainer
@@ -277,6 +278,8 @@ def get_data_loader(conf, batch_size, num_workers):
         dataset = DatasetMNISTR3(conf)
     elif conf['class_name'] == 'DatasetMNISTR4':
         dataset = DatasetMNISTR4(conf)
+    elif conf['class_name'] == 'DatasetDigits4':
+        dataset = DatasetDigits4(conf)
     else:
         dataset = None
     return torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
