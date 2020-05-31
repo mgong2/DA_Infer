@@ -807,7 +807,7 @@ class DA_Infer_AC_Adv(object):
         interpolates = alpha * real_data + ((1 - alpha) * fake_data)
         interpolates = autograd.Variable(interpolates, requires_grad=True)
 
-        _, _, _, _, disc_interpolates = self.dis(interpolates)
+        _, _, _, _, _, disc_interpolates = self.dis(interpolates)
 
         # witness = torch.exp(disc_interpolates) / torch.sum(torch.exp(disc_interpolates), dim=1)
         witness = disc_interpolates
