@@ -797,6 +797,7 @@ class CNN_AuxClassifier(nn.Module):
         self.aux_c_tw = nn.Linear(4 * 4 * ch, self.cl_num)
         self.aux_d_tw = nn.Linear(4 * 4 * ch, self.do_num)
         self.disc = nn.Linear(4 * 4 * ch, self.do_num)
+        self.cls = CNN_Classifier(i_dim, cl_num, ch)
 
     def forward(self, input0):
         input = self.common_net(input0)
@@ -806,8 +807,9 @@ class CNN_AuxClassifier(nn.Module):
         output_d = self.aux_d(input)
         output_d_tw = self.aux_d_tw(input)
         output_disc = self.disc(input)
+        output_cls = self.cls(input0)
 
-        return output_c, output_c_tw, output_d, output_d_tw, output_disc
+        return output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc
 
 
 # a CNN generator

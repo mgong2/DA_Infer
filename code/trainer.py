@@ -699,7 +699,7 @@ class DA_Infer_AC_Adv(object):
         elif config['estimate'] == 'Bayesian':
             noise_d = torch.randn(num_domain, dim_domain).to(device)
             fake_x_a, KL_reg = self.gen(noise, y_a_onehot, d_onehot, noise_d)
-        output_c, output_c_tw, output_d, output_d_tw, output_disc = self.dis(fake_x_a)
+        output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc = self.dis(fake_x_a)
 
         ids_s = y_a[:, 1] != num_domain - 1
         ids_t = y_a[:, 1] == num_domain - 1
@@ -710,7 +710,7 @@ class DA_Infer_AC_Adv(object):
         gan_loss = - output_disc.mean()
         aux_loss_c = self.aux_loss_func(output_c[ids_s], y_a[ids_s, 0])
         aux_loss_d = self.aux_loss_func(output_d, y_a[:, 1])
-        aux_loss_cls = self.aux_loss_func(output_c[ids_t], y_a[ids_t, 0])
+        aux_loss_cls = self.aux_loss_func(output_cls[ids_t], y_a[ids_t, 0])
 
         if state['epoch'] < config['warmup']:
             lambda_tar = 0
@@ -728,7 +728,7 @@ class DA_Infer_AC_Adv(object):
         self.aux_loss_c = aux_loss_c
         self.aux_loss_d = aux_loss_d
 
-    def dis_update(self, x_a, y_a, config, device='cpu'):
+    def dis_update(self, x_a, y_a, config, state, device='cpu'):
         for p in self.dis.parameters():
             p.requires_grad_(True)
         self.dis.zero_grad()
@@ -750,8 +750,8 @@ class DA_Infer_AC_Adv(object):
         elif config['estimate'] == 'Bayesian':
             noise_d = torch.randn(num_domain, dim_domain).to(device)
             fake_x_a, _ = self.gen(noise, y_a_onehot, d_onehot, noise_d)
-        output_c, output_c_tw, output_d, output_d_tw, output_disc = self.dis(fake_x_a.detach())
-        output_c1, output_c_tw1, output_d1, output_d_tw1, output_disc1 = self.dis(x_a)
+        output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc = self.dis(fake_x_a.detach())
+        output_c1, output_c_tw1, output_d1, output_d_tw1, output_cls1, output_disc1 = self.dis(x_a)
 
         ids_s = y_a[:, 1] != num_domain - 1
         ids_t = y_a[:, 1] == num_domain - 1
@@ -765,12 +765,19 @@ class DA_Infer_AC_Adv(object):
         gan_loss = output_disc.mean() - output_disc1.mean()
         aux_loss_c1 = self.aux_loss_func(output_c1[ids_s], y_a[ids_s, 0])
         aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
+        aux_loss_cls = self.aux_loss_func(output_cls[ids_t], y_a[ids_t, 0])
+        aux_loss_cls1 = self.aux_loss_func(output_cls1[ids_s], y_a[ids_s, 0])
+        
+        if state['epoch'] < config['warmup']:
+            lambda_tar = 0
+        else:
+            lambda_tar = config['TAR_weight']
 
         if config['gp']:
             gradient_penalty = self.calc_gradient_penalty(x_a, fake_x_a.detach(), device=device)
-            errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1) + 10 * gradient_penalty
+            errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1 + aux_loss_cls1 + lambda_tar * aux_loss_cls) + 10 * gradient_penalty
         else:
-            errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1)
+            errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1 + aux_loss_cls1 + lambda_tar * aux_loss_cls)
 
         errD.backward()
         self.dis_opt.step()

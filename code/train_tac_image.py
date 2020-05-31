@@ -28,7 +28,7 @@ def test_acc(model, test_loader, device):
             data, target = data.to(device), target.to(device).view(data.size(0), 2)
             # output_tac, _, _, _, output_ac = model(data) # output_tac is actually output_cls !!
             # _, _, _, _, output_ac, _ = model(data) # output_tac is actually output_cls !!
-            output_ac, _, _, _, _ = model(data) # output_tac is actually output_cls !!
+            _, _, _, _, output_ac, _ = model(data) # output_tac is actually output_cls !!
             test_loss_ac += F.nll_loss(output_ac, target[:, 0]).sum().item()  # sum up batch loss
             pred_ac = output_ac.max(1, keepdim=True)[1]  # get the index of the max log-probability
             correct_ac += pred_ac.eq(target[:, 0].view_as(pred_ac)).sum().item()
