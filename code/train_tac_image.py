@@ -158,7 +158,7 @@ def run(config):
             y = y.to(device).view(x.size(0), 2)
 
             if Diter < Diters:
-                trainer.dis_update(x, y, config, device)
+                trainer.dis_update(x, y, config, state_dict, device)
                 Diter += 1
                 if Diter == Diters:
                     Giter = 0
