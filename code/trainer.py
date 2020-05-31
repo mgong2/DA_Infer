@@ -528,7 +528,7 @@ class DA_Infer_TAC_Adv(object):
         self.aux_loss_ct = aux_loss_ct
         self.aux_loss_dt = aux_loss_dt
 
-    def dis_update(self, x_a, y_a, config, device='cpu'):
+    def dis_update(self, x_a, y_a, config, state, device='cpu'):
         for p in self.dis.parameters():
             p.requires_grad_(True)
         self.dis.zero_grad()
