@@ -61,7 +61,7 @@ class DA_Poolnn(object):
         torch.save(state_dict, state_filename)
 
 
-# DA_Infer trainer, deterministic/probabilistic theta encoder, implemented by tac-gan/mmd-gan
+# DA_Infer trainer, deterministic/probabilistic theta encoder, implemented by tac-gan + mmd-gan
 class DA_Infer_TAC(object):
     def __init__(self, config):
         input_dim = config['idim']
@@ -233,7 +233,7 @@ class DA_Infer_TAC(object):
         torch.save(state_dict, state_filename)
 
 
-# DA_Infer trainer, deterministic/probabilistic theta encoder, implemented by tac-gan/mmd-gan
+# DA_Infer trainer, deterministic/probabilistic theta encoder, implemented by tac-gan
 class DA_Infer_TAC_Adv(object):
     def __init__(self, config):
         input_dim = config['idim']
@@ -395,6 +395,169 @@ class DA_Infer_TAC_Adv(object):
         self.aux_loss_dt = aux_loss_dt
         self.aux_loss_cls = aux_loss_cls
         self.aux_loss_cls1 = aux_loss_cls1
+        self.gan_loss = gan_loss
+
+    def resume(self, snapshot_prefix):
+            gen_filename = snapshot_prefix + '_gen.pkl'
+            dis_filename = snapshot_prefix + '_dis.pkl'
+            state_filename = snapshot_prefix + '_state.pkl'
+            self.gen.load_state_dict(torch.load(gen_filename))
+            self.dis.load_state_dict(torch.load(dis_filename))
+            state_dict = torch.load(state_filename)
+            print('Resume the model')
+            return state_dict
+
+    def save(self, snapshot_prefix, state_dict):
+        gen_filename = snapshot_prefix + '_gen.pkl'
+        dis_filename = snapshot_prefix + '_dis.pkl'
+        state_filename = snapshot_prefix + '_state.pkl'
+        torch.save(self.gen.state_dict(), gen_filename)
+        torch.save(self.dis.state_dict(), dis_filename)
+        torch.save(state_dict, state_filename)
+
+
+# DA_Infer trainer, deterministic/probabilistic theta encoder, implemented by ac-gan
+class DA_Infer_AC_Adv(object):
+    def __init__(self, config):
+        input_dim = config['idim']
+        num_class = config['num_class']
+        num_domain = config['num_domain']
+        dim_class = config['dim_y']
+        dim_domain = config['dim_d']
+        dim_hidden = config['dim_z']
+        num_layer = config['mlp_layers']
+        num_nodes = config['mlp_nodes']
+        is_reg = config['is_reg']
+
+        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'ML':
+            self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
+                                     num_nodes, is_reg, prob=False)
+        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'Bayesian':
+            self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
+                                     num_nodes, is_reg, prob=True)
+        if config['G_model'] == 'CNN_Generator' and config['estimate'] == 'ML':
+            self.gen = CNN_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                     num_nodes, prob=False)
+        if config['G_model'] == 'CNN_Generator' and config['estimate'] == 'Bayesian':
+            self.gen = CNN_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                     num_nodes, prob=True)
+        utils.seed_rng(config['seed'])
+        if config['D_model'] == 'MLP_AuxClassifier':
+            self.dis = MLP_AuxClassifier(input_dim, num_class, num_domain, num_layer, num_nodes, is_reg)
+        if config['D_model'] == 'CNN_AuxClassifier':
+            self.dis = CNN_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
+
+        # set optimizers
+        self.gen_opt = torch.optim.Adam(self.gen.parameters(), lr=config['G_lr'], betas=(config['G_B1'], config['G_B2']))
+        self.dis_opt = torch.optim.Adam(self.dis.parameters(), lr=config['D_lr'], betas=(config['D_B1'], config['D_B2']))
+        # if not config['skip_init']:
+        #     self.gen.apply(utils.xavier_weights_init)
+        #     self.dis.apply(utils.xavier_weights_init)
+
+        self.aux_loss_func = nn.CrossEntropyLoss()
+        self.sigmoid_xent = nn.BCEWithLogitsLoss()
+
+        self.gan_loss = 0
+        self.aux_loss_c = 0
+        self.aux_loss_c1 = 0
+        self.aux_loss_ct = 0
+        self.aux_loss_d = 0
+        self.aux_loss_d1 = 0
+        self.aux_loss_dt = 0
+        self.aux_loss_cls = 0
+        self.aux_loss_cls1 = 0
+
+    def to(self, device):
+        self.gen.to(device)
+        self.dis.to(device)
+
+    def gen_update(self, x_a, y_a, config, device='cpu'):
+        for p in self.dis.parameters():
+            p.requires_grad_(False)
+        self.gen.zero_grad()
+        batch_size = config['batch_size']
+        dim_hidden = config['dim_z']
+        dim_domain = config['dim_d']
+        num_domain = config['num_domain']
+        num_class = config['num_class']
+        do_ss = config['do_ss']
+
+        # generate random Gaussian noise
+        noise = torch.randn(batch_size, dim_hidden).to(device)
+
+        # create domain labels
+        y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class).float()
+        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain).float()
+
+        if config['estimate'] == 'ML':
+            fake_x_a = self.gen(noise, y_a_onehot, d_onehot)
+        elif config['estimate'] == 'Bayesian':
+            noise_d = torch.randn(num_domain, dim_domain).to(device)
+            fake_x_a, KL_reg = self.gen(noise, y_a_onehot, d_onehot, noise_d)
+        output_c, output_c_tw, output_d, output_d_tw, output_disc = self.dis(fake_x_a)
+
+        ids_s = y_a[:, 1] != num_domain - 1
+        ids_t = y_a[:, 1] == num_domain - 1
+
+        lambda_c = config['AC_weight']
+        lambda_tar = config['TAR_weight']
+        gan_loss = self.sigmoid_xent(output_disc, torch.ones_like(output_disc, device=device))
+        aux_loss_c = self.aux_loss_func(output_c, y_a[:, 0])
+        aux_loss_d = self.aux_loss_func(output_d, y_a[:, 1])
+
+        if config['estimate'] == 'ML':
+            errG = gan_loss + lambda_c * (aux_loss_c + aux_loss_d)
+        elif config['estimate'] == 'Bayesian':
+            errG = gan_loss + lambda_c * (aux_loss_c + aux_loss_d) + torch.dot(1.0/do_ss.to(device).squeeze(), KL_reg.squeeze())
+
+        errG.backward()
+        self.gen_opt.step()
+        # self.gan_loss = gan_loss
+        self.aux_loss_c = aux_loss_c
+        self.aux_loss_d = aux_loss_d
+
+    def dis_update(self, x_a, y_a, config, device='cpu'):
+        for p in self.dis.parameters():
+            p.requires_grad_(True)
+        self.dis.zero_grad()
+        batch_size = config['batch_size']
+        dim_hidden = config['dim_z']
+        dim_domain = config['dim_d']
+        num_domain = config['num_domain']
+        num_class = config['num_class']
+
+        # generate random Gaussian noise
+        noise = torch.randn(batch_size, dim_hidden).to(device)
+
+        # create domain labels
+        y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class).float()
+        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain).float()
+
+        if config['estimate'] == 'ML':
+            fake_x_a = self.gen(noise, y_a_onehot, d_onehot)
+        elif config['estimate'] == 'Bayesian':
+            noise_d = torch.randn(num_domain, dim_domain).to(device)
+            fake_x_a, _ = self.gen(noise, y_a_onehot, d_onehot, noise_d)
+        output_c, output_c_tw, output_d, output_d_tw, output_disc = self.dis(fake_x_a.detach())
+        output_c1, output_c_tw1, output_d1, output_d_tw1, output_disc1 = self.dis(x_a)
+
+        ids_s = y_a[:, 1] != num_domain - 1
+        ids_t = y_a[:, 1] == num_domain - 1
+
+        lambda_tar = config['TAR_weight']
+        lambda_c = config['AC_weight']
+        gan_loss = 0.5 * (
+                self.sigmoid_xent(output_disc1, torch.ones_like(output_disc1, device=device)) +
+                self.sigmoid_xent(output_disc, torch.zeros_like(output_disc, device=device))
+        )
+        aux_loss_c1 = self.aux_loss_func(output_c1, y_a[:, 0])
+        aux_loss_d1 = self.aux_loss_func(output_d1, y_a[:, 1])
+        errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1)
+
+        errD.backward()
+        self.dis_opt.step()
+        self.aux_loss_c1 = aux_loss_c1
+        self.aux_loss_d1 = aux_loss_d1
         self.gan_loss = gan_loss
 
     def resume(self, snapshot_prefix):
