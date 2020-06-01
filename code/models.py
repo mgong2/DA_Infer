@@ -15,7 +15,7 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         main = nn.Sequential()
         for l in np.arange(num_layer - 1):
-            main.add_module('linear{0}'.format(l), nn.Linear(num_nodes[l], num_nodes[l + 1]))
+            main.add_module('linear{0}'.format(l), sn(nn.Linear(num_nodes[l], num_nodes[l + 1])))
             if relu_final:
                 main.add_module('relu{0}'.format(l), nn.ReLU())
             else:
@@ -64,7 +64,7 @@ class MLP_Generator(nn.Module):
         else:
             self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
-        self.decoder = sn(MLP(num_layer + 2, [z_dim+cl_dim+do_dim] + [num_nodes]*num_layer + [i_dim]))
+        self.decoder = MLP(num_layer + 2, [z_dim+cl_dim+do_dim] + [num_nodes]*num_layer + [i_dim])
         self.is_reg = is_reg
 
     def forward(self, noise, input_c, input_d, noise_d=None):
@@ -263,7 +263,7 @@ class DAG_Generator(nn.Module):
         for i in range(i_dim):
             num_nodesIn = int(numInput[i]) + cl_dim + do_dim + z_dim
             num_nodes_i = [num_nodesIn] + [num_nodes]*num_layer + [1]
-            netMB = sn(MLP(num_layer + 2, num_nodes_i))
+            netMB = MLP(num_layer + 2, num_nodes_i)
             nets.append(netMB)
 
         # prediction network
@@ -465,7 +465,7 @@ class PDAG_Generator(nn.Module):
         for i in range(i_dimNew):
             num_nodesIn = int(numInput[i]) + cl_dim + do_dim + z_dim * len(nodesA[i])
             num_nodes_i = [num_nodesIn] + [num_nodes]*num_layer + [len(nodesA[i])]
-            netMB = sn(MLP(num_layer + 2, num_nodes_i))
+            netMB = MLP(num_layer + 2, num_nodes_i)
             nets.append(netMB)
             dimNoise[i] = len(nodesA[i])
 
