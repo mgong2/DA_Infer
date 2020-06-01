@@ -935,8 +935,8 @@ class DA_Infer_JMMD(object):
             lambda_tar = 0
         else:
             lambda_tar = config['TAR_weight']
-
-        aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
+        lambda_src = config['SRC_weight']
+        aux_loss_c = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
                      + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
         # aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0])
 
@@ -1086,7 +1086,8 @@ class DA_Infer_JMMD_DAG(object):
             lambda_tar = 0
         else:
             lambda_tar = config['TAR_weight']
-        aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
+        lambda_src = config['SRC_weight']
+        aux_loss_c = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
                      + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
 
         # MMD matching for each factor

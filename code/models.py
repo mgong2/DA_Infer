@@ -828,7 +828,7 @@ class UNIT_AuxClassifier(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=stride)
         )
-    
+
     def __init__(self, i_dim, cl_num, do_num, ch=64):
         super(UNIT_AuxClassifier, self).__init__()
         self.i_dim = i_dim

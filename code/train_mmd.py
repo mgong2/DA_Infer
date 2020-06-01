@@ -102,8 +102,16 @@ def run(config):
     test_loader = utils.get_data_loader(test_dataset_specs, batch_size, config['num_workers'])
 
     # compute pairwise distance for kernel width
-    pair_dist = pairwise_distances(train_loader.dataset.data)
-    config['base_x'] = np.median(pair_dist)
+    if config['trainer'] == 'DA_Infer_JMMD':
+        pair_dist = pairwise_distances(train_loader.dataset.data)
+        config['base_x'] = np.median(pair_dist)
+    elif config['trainer'] == 'DA_Infer_JMMD_DAG':
+        idim = config['idim']
+        pair_dist_median = np.zeros(idim)
+        for i in range(idim):
+            pair_dist = pairwise_distances(train_loader.dataset.data[:, i].reshape(-1, 1))
+            pair_dist_median[i] = np.median(pair_dist)
+        config['base_x'] = np.mean(pair_dist_median)
     pair_dist = pairwise_distances(train_loader.dataset.labels)
     config['base_y'] = np.median(pair_dist)
 
@@ -117,13 +125,13 @@ def run(config):
     best_score = state_dict['best_score']
     for ep in range(state_dict['epoch'], config['num_epochs']):
         state_dict['epoch'] = ep
-        test_acc_target_c = test_acc(trainer.dis, test_loader, device=device)
-        writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
-        if test_acc_target_c > best_score:
-            best_score = test_acc_target_c
-            state_dict['best_score'] = best_score
-        if ep == config['num_epochs'] - 1:
-            state_dict['final_score'] = test_acc_target_c
+        # test_acc_target_c = test_acc(trainer.dis, test_loader, device=device)
+        # writer.add_scalar('test_acc_target_ac', test_acc_target_c, ep)
+        # if test_acc_target_c > best_score:
+        #     best_score = test_acc_target_c
+        #     state_dict['best_score'] = best_score
+        # if ep == config['num_epochs'] - 1:
+        #     state_dict['final_score'] = test_acc_target_c
 
         for it, (x, y) in enumerate(train_loader):
             if x.size(0) != batch_size:

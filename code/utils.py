@@ -103,7 +103,7 @@ def prepare_parser():
         '--D_model', type=str, default='MLP_Classifier',
         help='Name of the model module (default: %(default)s)')
     parser.add_argument(
-        '--mlp_layers', type=int, default=4,
+        '--mlp_layers', type=int, default=3,
         help='number of MLP hidden layers (default: %(default)s)')
     parser.add_argument(
         '--mlp_nodes', type=int, default=10,
