@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
-from utils import gaussian_weights_init
+import utils
 
 
 class MyConvo2d(nn.Module):
@@ -228,7 +228,7 @@ class INSResBlock(nn.Module):
         if dropout > 0:
           model += [nn.Dropout(p=dropout)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         residual = x
@@ -247,7 +247,7 @@ class LeakyReLUConv2d(nn.Module):
         model += [nn.Conv2d(n_in, n_out, kernel_size=kernel_size, stride=stride, padding=padding, bias=True)]
         model += [nn.LeakyReLU(inplace=True)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         return self.model(x)
@@ -260,7 +260,7 @@ class LeakyReLUConvTranspose2d(nn.Module):
         model += [nn.ConvTranspose2d(n_in, n_out, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=output_padding, bias=True)]
         model += [nn.LeakyReLU(inplace=True)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         return self.model(x)
@@ -274,7 +274,7 @@ class LeakyReLUBNConv2d(nn.Module):
         model += [nn.BatchNorm2d(n_out)]
         model += [nn.LeakyReLU(inplace=True)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         return self.model(x)
@@ -288,7 +288,7 @@ class LeakyReLUBNConvTranspose2d(nn.Module):
         model += [nn.BatchNorm2d(n_out)]
         model += [nn.LeakyReLU(inplace=True)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         return self.model(x)
@@ -303,7 +303,7 @@ class LeakyReLUBNNSConv2d(nn.Module):
         model += [Bias2d(n_out)]
         model += [nn.LeakyReLU(inplace=True)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         return self.model(x)
@@ -318,7 +318,7 @@ class LeakyReLUBNNSConvTranspose2d(nn.Module):
         model += [Bias2d(n_out)]
         model += [nn.LeakyReLU(inplace=True)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         return self.model(x)
@@ -334,7 +334,7 @@ class ReLUINSConv2d(nn.Module):
         model += [nn.InstanceNorm2d(n_out, affine=False)]
         model += [nn.ReLU(inplace=True)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         return self.model(x)
@@ -348,7 +348,7 @@ class ReLUINSConvTranspose2d(nn.Module):
         model += [nn.InstanceNorm2d(n_out, affine=False)]
         model += [nn.ReLU(inplace=True)]
         self.model = nn.Sequential(*model)
-        self.model.apply(gaussian_weights_init)
+        self.model.apply(utils.gaussian_weights_init)
 
     def forward(self, x):
         return self.model(x)
