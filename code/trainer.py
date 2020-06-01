@@ -601,7 +601,7 @@ class DA_Infer_TAC_Adv(object):
             gradient_penalty = self.calc_gradient_penalty(x_a, fake_x_a.detach(), device=device)
             errD = gan_loss + \
                    lambda_c * (aux_loss_c1 + aux_loss_d1 + aux_loss_ct + aux_loss_dt + aux_loss_cls1 + lambda_tar * aux_loss_cls) \
-                   + 10 * gradient_penalty
+                   + 1 * gradient_penalty
         else:
             errD = gan_loss + \
                    lambda_c * (aux_loss_c1 + aux_loss_d1 + aux_loss_ct + aux_loss_dt + aux_loss_cls1 + lambda_tar * aux_loss_cls)
@@ -828,7 +828,7 @@ class DA_Infer_AC_Adv(object):
 
         if config['gp']:
             gradient_penalty = self.calc_gradient_penalty(x_a, fake_x_a.detach(), device=device)
-            errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1 + aux_loss_cls1 + lambda_tar * aux_loss_cls) + 10 * gradient_penalty
+            errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1 + aux_loss_cls1 + lambda_tar * aux_loss_cls) + 1 * gradient_penalty
         else:
             errD = gan_loss + lambda_c * (aux_loss_c1 + aux_loss_d1 + aux_loss_cls1 + lambda_tar * aux_loss_cls)
 
