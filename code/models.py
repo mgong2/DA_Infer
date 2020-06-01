@@ -11,11 +11,14 @@ import torch.nn.functional as F
 
 #  mlp model
 class MLP(nn.Module):
-    def __init__(self, num_layer, num_nodes, relu_final=False):
+    def __init__(self, num_layer, num_nodes, relu_final=False, SN=True):
         super(MLP, self).__init__()
         main = nn.Sequential()
         for l in np.arange(num_layer - 1):
-            main.add_module('linear{0}'.format(l), sn(nn.Linear(num_nodes[l], num_nodes[l + 1])))
+            if SN:
+                main.add_module('linear{0}'.format(l), sn(nn.Linear(num_nodes[l], num_nodes[l + 1])))
+            else:
+                main.add_module('linear{0}'.format(l), nn.Linear(num_nodes[l], num_nodes[l + 1]))
             if relu_final:
                 main.add_module('relu{0}'.format(l), nn.ReLU())
             else:
@@ -879,19 +882,19 @@ class UNIT_Generator(nn.Module):
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
 
         self.decoder = nn.Sequential(
-            sn(nn.ConvTranspose2d(z_dim + cl_dim + do_dim, ch * 4, kernel_size=4, stride=2, padding=0)),
+            nn.ConvTranspose2d(z_dim + cl_dim + do_dim, ch * 4, kernel_size=4, stride=2, padding=0),
             nn.BatchNorm2d(ch * 4),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.ConvTranspose2d(ch * 4, ch, kernel_size=4, stride=2, padding=1)),
+            nn.ConvTranspose2d(ch * 4, ch, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1)),
+            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1)),
+            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.ConvTranspose2d(ch, i_dim, kernel_size=1, stride=1, padding=0)),
+            nn.ConvTranspose2d(ch, i_dim, kernel_size=1, stride=1, padding=0),
             nn.Tanh()
         )
 
@@ -922,19 +925,19 @@ class UNIT_Classifier(nn.Module):
         self.cl_num = cl_num
 
         self.common_net = nn.Sequential(
-            sn(nn.Conv2d(i_dim, ch, 5, 1, 2)),
+            nn.Conv2d(i_dim, ch, 5, 1, 2),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
-            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.Conv2d(ch, ch, 5, 1, 2),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
-            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.Conv2d(ch, ch, 5, 1, 2),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
-            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.Conv2d(ch, ch, 5, 1, 2),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
@@ -956,19 +959,19 @@ class UNIT_AuxClassifier(nn.Module):
         self.do_num = do_num
 
         self.common_net = nn.Sequential(
-            sn(nn.Conv2d(i_dim, ch, 5, 1, 2)),
+            nn.Conv2d(i_dim, ch, 5, 1, 2),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
-            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.Conv2d(ch, ch, 5, 1, 2),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
-            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.Conv2d(ch, ch, 5, 1, 2),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
-            sn(nn.Conv2d(ch, ch, 5, 1, 2)),
+            nn.Conv2d(ch, ch, 5, 1, 2),
             nn.BatchNorm2d(ch),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2),
@@ -995,7 +998,7 @@ class UNIT_AuxClassifier(nn.Module):
 class ConvBlock(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size=[3, 3],
                  padding=1, stride=1, n_class=None, bn=False,
-                 activation=F.relu, upsample=True, downsample=False,SN=True,emb=None,rate=1.0):
+                 activation=F.relu, upsample=True, downsample=False, SN=False, emb=None, rate=1.0):
         super().__init__()
 
         gain = 2 ** 0.5
