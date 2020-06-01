@@ -8,6 +8,7 @@ from collections import defaultdict
 import itertools
 import torch.nn.utils.spectral_norm as sn
 import torch.nn.functional as F
+from common_net import *
 
 
 #  mlp model
@@ -761,18 +762,10 @@ class UNIT_Generator(nn.Module):
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
 
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(z_dim + cl_dim + do_dim, ch * 4, kernel_size=4, stride=2, padding=0),
-            nn.BatchNorm2d(ch * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.ConvTranspose2d(ch * 4, ch, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
+            LeakyReLUBNNSConvTranspose2d(z_dim + cl_dim + do_dim, ch*8, kernel_size=4, stride=2, padding=0),
+            LeakyReLUBNNSConvTranspose2d(ch*8, ch*4, kernel_size=4, stride=2, padding=1),
+            LeakyReLUBNNSConvTranspose2d(ch*4, ch*2, kernel_size=4, stride=2, padding=1),
+            LeakyReLUBNNSConvTranspose2d(ch*2, ch*1, kernel_size=4, stride=2, padding=1),
             nn.ConvTranspose2d(ch, i_dim, kernel_size=1, stride=1, padding=0),
             nn.Tanh()
         )
@@ -797,6 +790,13 @@ class UNIT_Generator(nn.Module):
 
 
 class UNIT_Classifier(nn.Module):
+    def _conv2d(self, n_in, n_out, kernel_size, stride, padding):
+        return nn.Sequential(
+            nn.Conv2d(n_in, n_out, kernel_size=kernel_size, stride=1, padding=padding),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=stride)
+        )
+
     def __init__(self, i_dim, cl_num, ch):
         super(UNIT_Classifier, self).__init__()
         self.i_dim = i_dim
@@ -804,23 +804,15 @@ class UNIT_Classifier(nn.Module):
         self.cl_num = cl_num
 
         self.common_net = nn.Sequential(
-            nn.Conv2d(i_dim, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, cl_num, 2, 1, 0),
+            self._conv2d(i_dim, ch, kernel_size=5, stride=2, padding=2),
+            nn.Dropout(0.1),
+            self._conv2d(ch * 1, ch * 2, kernel_size=5, stride=2, padding=2),
+            nn.Dropout(0.3),
+            self._conv2d(ch * 2, ch * 4, kernel_size=5, stride=2, padding=2),
+            nn.Dropout(0.5),
+            self._conv2d(ch * 4, ch * 8, kernel_size=5, stride=2, padding=2),
+            nn.Dropout(0.5),
+            nn.Conv2d(ch * 8, cl_num, kernel_size=2, stride=1, padding=0)
         )
 
     def forward(self, input0):
@@ -838,28 +830,21 @@ class UNIT_AuxClassifier(nn.Module):
         self.do_num = do_num
 
         self.common_net = nn.Sequential(
-            nn.Conv2d(i_dim, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
+            self._conv2d(i_dim, ch, kernel_size=5, stride=2, padding=2),
+            nn.Dropout(0.1),
+            self._conv2d(ch * 1, ch * 2, kernel_size=5, stride=2, padding=2),
+            nn.Dropout(0.3),
+            self._conv2d(ch * 2, ch * 4, kernel_size=5, stride=2, padding=2),
+            nn.Dropout(0.5),
+            self._conv2d(ch * 4, ch * 8, kernel_size=5, stride=2, padding=2),
+            nn.Dropout(0.5),
         )
-        self.aux_c = nn.Conv2d(ch, cl_num, 2, 1, 0)
-        self.aux_d = nn.Conv2d(ch, do_num, 2, 1, 0)
-        self.aux_c_tw = nn.Conv2d(ch, cl_num, 2, 1, 0)
-        self.aux_d_tw = nn.Conv2d(ch, do_num, 2, 1, 0)
-        self.disc = nn.Conv2d(ch, 1, 2, 1, 0)
+
+        self.aux_c = nn.Conv2d(ch*8, cl_num, 2, 1, 0)
+        self.aux_d = nn.Conv2d(ch*8, do_num, 2, 1, 0)
+        self.aux_c_tw = nn.Conv2d(ch*8, cl_num, 2, 1, 0)
+        self.aux_d_tw = nn.Conv2d(ch*8, do_num, 2, 1, 0)
+        self.disc = nn.Conv2d(ch*8, 1, 2, 1, 0)
         self.cls = UNIT_Classifier(i_dim, cl_num, ch)
 
     def forward(self, input0):
@@ -901,9 +886,9 @@ class CNN_Classifier_Exp(nn.Module):
         return output_c
 
 
-class CNN_AuxClassifier_EXP(nn.Module):
+class CNN_AuxClassifier_Exp(nn.Module):
     def __init__(self, i_dim, cl_num, do_num, ch=64):
-        super(CNN_AuxClassifier_EXP, self).__init__()
+        super(CNN_AuxClassifier_Exp, self).__init__()
         self.i_dim = i_dim
         self.ch = ch
         self.cl_num = cl_num
@@ -941,9 +926,9 @@ class CNN_AuxClassifier_EXP(nn.Module):
 
 
 # a CNN generator
-class CNN_Generator_EXP(nn.Module):
+class CNN_Generator_Exp(nn.Module):
     def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, ch=64, prob=True):
-        super(CNN_Generator_EXP, self).__init__()
+        super(CNN_Generator_Exp, self).__init__()
         self.prob = prob
         self.do_dim = do_dim
         self.ch = ch
@@ -988,135 +973,6 @@ class CNN_Generator_EXP(nn.Module):
             return output, -KL_reg
         else:
             return output
-
-
-# a CNN generator
-class UNIT_Generator_EXP(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, cl_dim, do_dim, z_dim, ch=64, prob=True):
-        super(UNIT_Generator_EXP, self).__init__()
-        self.prob = prob
-        self.do_dim = do_dim
-        self.ch = ch
-        if prob:
-            # VAE posterior parameters, Gaussian
-            self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
-            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
-        else:
-            self.ld = nn.Linear(do_num, do_dim, bias=False)
-        self.lc = nn.Linear(cl_num, cl_dim, bias=False)
-
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(z_dim + cl_dim + do_dim, ch * 4, kernel_size=4, stride=2, padding=0),
-            nn.BatchNorm2d(ch * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.ConvTranspose2d(ch * 4, ch, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.ConvTranspose2d(ch, ch, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.ConvTranspose2d(ch, i_dim, kernel_size=1, stride=1, padding=0),
-            nn.Tanh()
-        )
-
-    def forward(self, noise, input_c, input_d, noise_d=None):
-        embed_c = self.lc(input_c)
-        if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
-            embed_d = torch.matmul(input_d, theta)
-        else:
-            embed_d = self.ld(input_d)
-        z = torch.cat((embed_c, noise, embed_d), axis=1)
-        z = z.view(z.size(0), z.size(1), 1, 1)
-        output = self.decoder(z)
-        if self.prob:
-            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
-            if KL_reg.shape[1] > 1:
-                KL_reg = KL_reg.sum(axis=1)
-            return output, -KL_reg
-        else:
-            return output
-
-
-class UNIT_Classifier_EXP(nn.Module):
-    def __init__(self, i_dim, cl_num, ch):
-        super(UNIT_Classifier_EXP, self).__init__()
-        self.i_dim = i_dim
-        self.ch = ch
-        self.cl_num = cl_num
-
-        self.common_net = nn.Sequential(
-            nn.Conv2d(i_dim, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, cl_num, 2, 1, 0),
-        )
-
-    def forward(self, input0):
-        input = self.common_net(input0)
-        output_c = input.view(-1, self.cl_num)
-        return output_c
-
-
-class UNIT_AuxClassifier_EXP(nn.Module):
-    def __init__(self, i_dim, cl_num, do_num, ch=64):
-        super(UNIT_AuxClassifier_EXP, self).__init__()
-        self.i_dim = i_dim
-        self.ch = ch
-        self.cl_num = cl_num
-        self.do_num = do_num
-
-        self.common_net = nn.Sequential(
-            nn.Conv2d(i_dim, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(ch, ch, 5, 1, 2),
-            nn.BatchNorm2d(ch),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-        )
-        self.aux_c = nn.Conv2d(ch, cl_num, 2, 1, 0)
-        self.aux_d = nn.Conv2d(ch, do_num, 2, 1, 0)
-        self.aux_c_tw = nn.Conv2d(ch, cl_num, 2, 1, 0)
-        self.aux_d_tw = nn.Conv2d(ch, do_num, 2, 1, 0)
-        self.disc = nn.Conv2d(ch, 1, 2, 1, 0)
-        self.cls = UNIT_Classifier(i_dim, cl_num, ch)
-
-    def forward(self, input0):
-        input = self.common_net(input0)
-        output_c = self.aux_c(input).view(-1, self.cl_num)
-        output_c_tw = self.aux_c_tw(input).view(-1, self.cl_num)
-        output_d = self.aux_d(input).view(-1, self.do_num)
-        output_d_tw = self.aux_d_tw(input).view(-1, self.do_num)
-        output_disc = self.disc(input).view(-1, 1)
-        output_cls = self.cls(input0)
-
-        return output_c, output_c_tw, output_d, output_d_tw, output_cls, output_disc
 
 
 class ConvBlock(nn.Module):

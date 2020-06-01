@@ -80,12 +80,10 @@ class DA_Infer_TAC(object):
         num_nodes = config['mlp_nodes']
         is_reg = config['is_reg']
 
-        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'ML':
+        isProb = config['estimate'] == 'Bayesian'
+        if config['G_model'] == 'MLP_Generator':
             self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=False)
-        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=True)
+                                     num_nodes, is_reg, prob=isProb)
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_AuxClassifier':
             self.dis = MLP_AuxClassifier(input_dim, num_class, num_domain, num_layer, num_nodes, is_reg)
@@ -435,36 +433,30 @@ class DA_Infer_TAC_Adv(object):
         num_nodes = config['mlp_nodes']
         is_reg = config['is_reg']
 
-        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'ML':
+        isProb = config['estimate'] == 'Bayesian'
+        if config['G_model'] == 'MLP_Generator':
             self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=False)
-        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=True)
-        if config['G_model'] == 'CNN_Generator' and config['estimate'] == 'ML':
+                                     num_nodes, is_reg, prob=isProb)
+        if config['G_model'] == 'CNN_Generator':
             self.gen = CNN_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                     num_nodes, prob=False)
-        if config['G_model'] == 'CNN_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = CNN_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                     num_nodes, prob=True)
-        if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'ML':
+                                     num_nodes, prob=isProb)
+        if config['G_model'] == 'CNN_Generator_Exp':
+            self.gen = CNN_Generator_Exp(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                         num_nodes, prob=isProb)
+        if config['G_model'] == 'UNIT_Generator':
             self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                      num_nodes, prob=False)
-        if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                      num_nodes, prob=True)
-        if config['G_model'] == 'RES_Generator' and config['estimate'] == 'ML':
+                                      num_nodes, prob=isProb)
+        if config['G_model'] == 'RES_Generator':
             self.gen = RES_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                      num_nodes, prob=False)
-        if config['G_model'] == 'RES_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = RES_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                      num_nodes, prob=True)
+                                     num_nodes, prob=isProb)
 
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_AuxClassifier':
             self.dis = MLP_AuxClassifier(input_dim, num_class, num_domain, num_layer, num_nodes, is_reg)
         if config['D_model'] == 'CNN_AuxClassifier':
             self.dis = CNN_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
+        if config['D_model'] == 'CNN_AuxClassifier_Exp':
+            self.dis = CNN_AuxClassifier_Exp(input_dim, num_class, num_domain, num_nodes)
         if config['D_model'] == 'UNIT_AuxClassifier':
             self.dis = UNIT_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
         if config['D_model'] == 'RES_AuxClassifier':
@@ -665,36 +657,30 @@ class DA_Infer_AC_Adv(object):
         num_nodes = config['mlp_nodes']
         is_reg = config['is_reg']
 
-        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'ML':
+        isProb = config['estimate'] == 'Bayesian'
+        if config['G_model'] == 'MLP_Generator':
             self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=False)
-        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=True)
-        if config['G_model'] == 'CNN_Generator' and config['estimate'] == 'ML':
+                                     num_nodes, is_reg, prob=isProb)
+        if config['G_model'] == 'CNN_Generator':
             self.gen = CNN_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                     num_nodes, prob=False)
-        if config['G_model'] == 'CNN_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = CNN_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                     num_nodes, prob=True)
-        if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'ML':
+                                     num_nodes, prob=isProb)
+        if config['G_model'] == 'CNN_Generator_Exp':
+            self.gen = CNN_Generator_Exp(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
+                                     num_nodes, prob=isProb)
+        if config['G_model'] == 'UNIT_Generator':
             self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                      num_nodes, prob=False)
-        if config['G_model'] == 'UNIT_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = UNIT_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                      num_nodes, prob=True)
-        if config['G_model'] == 'RES_Generator' and config['estimate'] == 'ML':
+                                      num_nodes, prob=isProb)
+        if config['G_model'] == 'RES_Generator':
             self.gen = RES_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                     num_nodes, prob=False)
-        if config['G_model'] == 'RES_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = RES_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden,
-                                     num_nodes, prob=True)
+                                     num_nodes, prob=isProb)
 
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_AuxClassifier':
             self.dis = MLP_AuxClassifier(input_dim, num_class, num_domain, num_layer, num_nodes, is_reg)
         if config['D_model'] == 'CNN_AuxClassifier':
             self.dis = CNN_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
+        if config['D_model'] == 'CNN_AuxClassifier_Exp':
+            self.dis = CNN_AuxClassifier_Exp(input_dim, num_class, num_domain, num_nodes)
         if config['D_model'] == 'UNIT_AuxClassifier':
             self.dis = UNIT_AuxClassifier(input_dim, num_class, num_domain, num_nodes)
         if config['D_model'] == 'RES_AuxClassifier':
@@ -886,12 +872,10 @@ class DA_Infer_JMMD(object):
         num_nodes = config['mlp_nodes']
         is_reg = config['is_reg']
 
-        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'ML':
+        isProb = config['estimate'] == 'Bayesian'
+        if config['G_model'] == 'MLP_Generator':
             self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=False)
-        if config['G_model'] == 'MLP_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=True)
+                                     num_nodes, is_reg, prob=isProb)
         # Seed RNG
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_Classifier':
@@ -1018,18 +1002,13 @@ class DA_Infer_JMMD_DAG(object):
         npzfile = np.load(dag_mat_file)
         dag_mat = npzfile['mat']
 
-        if config['G_model'] == 'DAG_Generator' and config['estimate'] == 'ML':
+        isProb = config['estimate'] == 'Bayesian'
+        if config['G_model'] == 'DAG_Generator':
             self.gen = DAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, dag_mat, prob=False)
-        if config['G_model'] == 'DAG_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = DAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, dag_mat, prob=True)
-        if config['G_model'] == 'PDAG_Generator' and config['estimate'] == 'ML':
+                                     num_nodes, is_reg, dag_mat, prob=isProb)
+        if config['G_model'] == 'PDAG_Generator':
             self.gen = PDAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, dag_mat, prob=False)
-        if config['G_model'] == 'PDAG_Generator' and config['estimate'] == 'Bayesian':
-            self.gen = PDAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, dag_mat, prob=True)
+                                     num_nodes, is_reg, dag_mat, prob=isProb)
 
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_Classifier':
