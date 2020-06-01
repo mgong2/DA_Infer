@@ -92,7 +92,7 @@ def prepare_parser():
         '--gp', action='store_false',
         help='is regression?: %(default)s)')
     parser.add_argument(
-        '--sn', action='store_false',
+        '--sn', action='store_true',
         help='is regression?: %(default)s)')
 
     ### Model stuff ###
