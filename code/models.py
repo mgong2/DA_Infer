@@ -9,9 +9,10 @@ import itertools
 import torch.nn.utils.spectral_norm as sn
 import torch.nn.functional as F
 
+
 #  mlp model
 class MLP(nn.Module):
-    def __init__(self, num_layer, num_nodes, relu_final=False, SN=True):
+    def __init__(self, num_layer, num_nodes, relu_final=False, SN=False):
         super(MLP, self).__init__()
         main = nn.Sequential()
         for l in np.arange(num_layer - 1):

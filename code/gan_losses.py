@@ -39,4 +39,4 @@ def loss_hinge_gen(dis_fake):
 
 # Default to hinge loss
 generator_loss = loss_hinge_gen
-discriminator_loss = loss_hinge_dis
+discriminator_loss = wgan_dis
