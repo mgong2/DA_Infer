@@ -27,6 +27,8 @@ class DA_Poolnn(object):
             self.dis = MLP_Classifier(input_dim, num_class, num_layer, num_nodes)
         if config['D_model'] == 'CNN_Classifier':
             self.dis = CNN_Classifier(input_dim, num_class, num_nodes)
+        if config['D_model'] == 'CNN_Classifier_Exp':
+            self.dis = CNN_Classifier_Exp(input_dim, num_class, num_nodes)
         if config['D_model'] == 'UNIT_Classifier':
             self.dis = UNIT_Classifier(input_dim, num_class, num_nodes)
         if config['D_model'] == 'RES_Classifier':
