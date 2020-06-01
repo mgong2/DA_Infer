@@ -822,6 +822,13 @@ class UNIT_Classifier(nn.Module):
 
 
 class UNIT_AuxClassifier(nn.Module):
+    def _conv2d(self, n_in, n_out, kernel_size, stride, padding):
+        return nn.Sequential(
+            nn.Conv2d(n_in, n_out, kernel_size=kernel_size, stride=1, padding=padding),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=stride)
+        )
+    
     def __init__(self, i_dim, cl_num, do_num, ch=64):
         super(UNIT_AuxClassifier, self).__init__()
         self.i_dim = i_dim
