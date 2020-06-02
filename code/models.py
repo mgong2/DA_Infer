@@ -911,7 +911,7 @@ class CNN_AuxClassifier_Exp(nn.Module):
         self.aux_c_tw = nn.Linear(4*4*4*ch, self.cl_num)
         self.aux_d_tw = nn.Linear(4*4*4*ch, self.do_num)
         self.disc = nn.Linear(4*4*4*ch, 1)
-        self.cls = CNN_Classifier(i_dim, cl_num, ch)
+        self.cls = CNN_Classifier_Exp(i_dim, cl_num, ch)
 
     def forward(self, input0):
         input = self.common_net(input0)
