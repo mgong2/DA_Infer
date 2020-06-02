@@ -953,7 +953,7 @@ class CNN_Generator_Exp(nn.Module):
             nn.ConvTranspose2d(ch*2, ch, kernel_size=2, stride=2),
             nn.BatchNorm2d(ch),
             nn.ReLU(True),
-            nn.ConvTranspose2d(ch, i_dim, kernel_size=3, stride=2),
+            nn.ConvTranspose2d(ch, i_dim, kernel_size=2, stride=2),
             nn.Tanh()
         )
 
