@@ -141,10 +141,10 @@ def prepare_parser():
 
     ### Optimizer stuff ###
     parser.add_argument(
-        '--G_lr', type=float, default=2e-3,
+        '--G_lr', type=float, default=1e-2,
         help='Learning rate to use for Generator (default: %(default)s)')
     parser.add_argument(
-        '--D_lr', type=float, default=2e-3,
+        '--D_lr', type=float, default=1e-2,
         help='Learning rate to use for Discriminator (default: %(default)s)')
     parser.add_argument(
         '--G_B1', type=float, default=0.5,
