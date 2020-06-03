@@ -734,7 +734,7 @@ class DA_Infer_JMMD(object):
 
         ids_s = y_a[:, 1] != num_domain - 1
         ids_t = y_a[:, 1] == num_domain - 1
-        output_cr = self.dis(x_a[ids_s])
+        # output_cr = self.dis(x_a[ids_s])
         output_cf = self.dis(fake_x_a)
 
         # Train mode 0: only use MMD for G
@@ -931,7 +931,7 @@ class DA_Infer_JMMD_DAG(object):
 
         ids_s = y_a[:, 1] != num_domain - 1
         ids_t = y_a[:, 1] == num_domain - 1
-        output_cr = self.dis(x_a[ids_s])
+        # output_cr = self.dis(x_a[ids_s])
         output_cf = self.dis(fake_x_a_cls)
 
         # Train mode 0: only use MMD for G
@@ -1033,25 +1033,27 @@ class DA_Infer_JMMD_DAG(object):
         do_ss = config['do_ss']
 
         # generate random Gaussian noise
-        noise = torch.randn(batch_size, dim_hidden * input_dim).to(device)
+        if dim_hidden != 0:
+            noise = torch.randn((batch_size, dim_hidden * input_dim), device=device)
 
         # create domain labels
         if not is_reg:
             y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class).float()
         else:
             y_a_onehot = y_a[:, 0].view(batch_size, 1)
+
         d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain).float()
 
         if config['estimate'] == 'ML':
-            fake_x_a = self.gen(noise, y_a_onehot, d_onehot)
+            fake_x_a_cls = self.gen(noise, y_a_onehot, d_onehot, device=device)
         elif config['estimate'] == 'Bayesian':
-            noise_d = torch.randn(num_domain, dim_domain).to(device)
-            fake_x_a, KL_reg = self.gen(noise, y_a_onehot, d_onehot, noise_d)
+            noise_d = torch.randn(num_domain, dim_domain * input_dim).to(device)
+            fake_x_a_cls = self.gen(noise, y_a_onehot, d_onehot, device=device, noise_d=noise_d)
 
         ids_s = y_a[:, 1] != num_domain - 1
         ids_t = y_a[:, 1] == num_domain - 1
         output_cr = self.dis(x_a[ids_s])
-        output_cf = self.dis(fake_x_a.detach())
+        output_cf = self.dis(fake_x_a_cls.detach())
         lambda_tar = config['TAR_weight']
         lambda_src = config['SRC_weight']
         aux_loss_c_src = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0])
