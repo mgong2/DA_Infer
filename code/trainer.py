@@ -1023,6 +1023,7 @@ class DA_Infer_JMMD_DAG(object):
         for p in self.dis.parameters():
             p.requires_grad_(True)
         self.dis.zero_grad()
+        input_dim = config['idim']
         batch_size = config['batch_size']
         dim_hidden = config['dim_z']
         dim_domain = config['dim_d']
@@ -1032,7 +1033,7 @@ class DA_Infer_JMMD_DAG(object):
         do_ss = config['do_ss']
 
         # generate random Gaussian noise
-        noise = torch.randn(batch_size, dim_hidden).to(device)
+        noise = torch.randn(batch_size, dim_hidden * input_dim).to(device)
 
         # create domain labels
         if not is_reg:
