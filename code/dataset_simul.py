@@ -46,7 +46,7 @@ class dataset_simul_linear(data.Dataset):
             label_d_onehot.scatter_(1, label_d_tensor.view(self.sample_size * self.num_domain, 1), 1)
 
             # merge domain, label, and noise
-            net = DAGAN_Linear_Gen(self.dim, self.num_class, self.num_domain, 2, self.dim_d, 1, 64).to(device)
+            net = Linear_Generator(self.dim, self.num_class, self.num_domain, 2, self.dim_d, 1, 64).to(device)
             net.lc.weight.data.normal_(0, 2)
             net.ld.weight.data.normal_(0, 2)
             net.le.weight.data.normal_(0, 2)

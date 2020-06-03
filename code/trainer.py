@@ -738,14 +738,14 @@ class DA_Infer_JMMD(object):
         output_cf = self.dis(fake_x_a)
 
         # Train mode 0: only use MMD for G
-        if state['epoch'] < config['warmup'] or state['train_mode'] == 0:
+        if state['epoch'] < config['warmup'] or state['train_mode'] == 'm0':
             lambda_tar = 0
         else:
             lambda_tar = config['TAR_weight']
         # lambda_src = config['SRC_weight']
         # aux_loss_c_src = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0])
-        aux_loss_c_tar = lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
         # aux_loss_c = lambda_src * aux_loss_c_src + lambda_tar * aux_loss_c_tar
+        aux_loss_c_tar = lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
         aux_loss_c = lambda_tar * aux_loss_c_tar
 
         # sigma for MMD
@@ -1059,7 +1059,6 @@ class DA_Infer_JMMD_DAG(object):
         aux_loss_c_src = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0])
         aux_loss_c_tar = lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
         aux_loss_c = lambda_src * aux_loss_c_src + lambda_tar * aux_loss_c_tar
-
         aux_loss_c.backward()
         self.dis_opt.step()
         self.aux_loss_c = aux_loss_c
