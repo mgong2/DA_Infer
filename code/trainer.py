@@ -885,8 +885,9 @@ class DA_Infer_JMMD_DAG(object):
 
     # separate training of each module, trained on source + target domain together
     def gen_update(self, x_a, y_a, config, state, device='cpu'):
+        for p in self.dis.parameters():
+            p.requires_grad_(False)
         self.gen.zero_grad()
-        self.dis.zero_grad()
         input_dim = config['idim']
         dim_domain = config['dim_d']
         batch_size = config['batch_size']
@@ -919,7 +920,8 @@ class DA_Infer_JMMD_DAG(object):
         # sigma for MMD
         base_x = config['base_x']
         base_y = config['base_y']
-        sigma_list = [0.125, 0.25, 0.5, 1]
+        # sigma_list = [0.125, 0.25, 0.5, 1]
+        sigma_list = [0.1, 0.25, 0.5, 1, 2]
         sigma_listx = [sigma * base_x for sigma in sigma_list]
         sigma_listy = [sigma * base_y for sigma in sigma_list]
 
@@ -928,15 +930,15 @@ class DA_Infer_JMMD_DAG(object):
         output_cr = self.dis(x_a[ids_s])
         output_cf = self.dis(fake_x_a_cls)
 
-        # aux_loss_c = self.aux_loss_func(output_cr, y_a[ids_s, 0]) + self.aux_loss_func(output_cf[ids_s], y_a[ids_s, 0]) \
-        #              + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
-        if state['epoch'] < config['warmup']:
+        # Train mode 0: only use MMD for G
+        if state['epoch'] < config['warmup'] or state['train_mode'] == 0:
             lambda_tar = 0
         else:
             lambda_tar = config['TAR_weight']
-        lambda_src = config['SRC_weight']
-        aux_loss_c = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0]) + \
-                     + lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
+        # lambda_src = config['SRC_weight']
+        # aux_loss_c_src = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0])
+        aux_loss_c_tar = lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
+        aux_loss_c = lambda_tar * aux_loss_c_tar
 
         # MMD matching for each factor
         batch_size_s = len(y_a[ids_s, :])
@@ -1002,16 +1004,57 @@ class DA_Infer_JMMD_DAG(object):
 
         lambda_c = config['AC_weight']
         if config['estimate'] == 'ML':
-            errG = errG_s + errG_t + lambda_c * aux_loss_c
+            errG = (num_domain-1)**2 * errG_s + errG_t + lambda_c * aux_loss_c
         elif config['estimate'] == 'Bayesian':
-            errG = errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze())
+            errG = (num_domain-1)**2 * errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze())
 
         errG.backward()
         self.gen_opt.step()
-        self.dis_opt.step()
         self.mmd_loss = errG
         self.mmd_loss_s = errG_s
         self.mmd_loss_t = errG_t
+        self.aux_loss_c = aux_loss_c
+
+    def dis_update(self, x_a, y_a, config, state, device='cpu'):
+        for p in self.dis.parameters():
+            p.requires_grad_(True)
+        self.dis.zero_grad()
+        batch_size = config['batch_size']
+        dim_hidden = config['dim_z']
+        dim_domain = config['dim_d']
+        num_domain = config['num_domain']
+        num_class = config['num_class']
+        is_reg = config['is_reg']
+        do_ss = config['do_ss']
+
+        # generate random Gaussian noise
+        noise = torch.randn(batch_size, dim_hidden).to(device)
+
+        # create domain labels
+        if not is_reg:
+            y_a_onehot = torch.nn.functional.one_hot(y_a[:, 0], num_class).float()
+        else:
+            y_a_onehot = y_a[:, 0].view(batch_size, 1)
+        d_onehot = torch.nn.functional.one_hot(y_a[:, 1], num_domain).float()
+
+        if config['estimate'] == 'ML':
+            fake_x_a = self.gen(noise, y_a_onehot, d_onehot)
+        elif config['estimate'] == 'Bayesian':
+            noise_d = torch.randn(num_domain, dim_domain).to(device)
+            fake_x_a, KL_reg = self.gen(noise, y_a_onehot, d_onehot, noise_d)
+
+        ids_s = y_a[:, 1] != num_domain - 1
+        ids_t = y_a[:, 1] == num_domain - 1
+        output_cr = self.dis(x_a[ids_s])
+        output_cf = self.dis(fake_x_a.detach())
+        lambda_tar = config['TAR_weight']
+        lambda_src = config['SRC_weight']
+        aux_loss_c_src = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0])
+        aux_loss_c_tar = lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
+        aux_loss_c = lambda_src * aux_loss_c_src + lambda_tar * aux_loss_c_tar
+
+        aux_loss_c.backward()
+        self.dis_opt.step()
         self.aux_loss_c = aux_loss_c
 
     def resume(self, snapshot_prefix):
