@@ -103,10 +103,16 @@ def prepare_parser():
         '--D_model', type=str, default='MLP_Classifier',
         help='Name of the model module (default: %(default)s)')
     parser.add_argument(
-        '--mlp_layers', type=int, default=3,
+        '--G_mlp_layers', type=int, default=1,
         help='number of MLP hidden layers (default: %(default)s)')
     parser.add_argument(
-        '--mlp_nodes', type=int, default=10,
+        '--G_mlp_nodes', type=int, default=30,
+        help='number of nodes in each MLP hidden layer (default: %(default)s)')
+    parser.add_argument(
+        '--D_mlp_layers', type=int, default=1,
+        help='number of MLP hidden layers (default: %(default)s)')
+    parser.add_argument(
+        '--D_mlp_nodes', type=int, default=100,
         help='number of nodes in each MLP hidden layer (default: %(default)s)')
     parser.add_argument(
         '--dim_z', type=int, default=4,
@@ -135,10 +141,10 @@ def prepare_parser():
 
     ### Optimizer stuff ###
     parser.add_argument(
-        '--G_lr', type=float, default=2e-3,
+        '--G_lr', type=float, default=1e-2,
         help='Learning rate to use for Generator (default: %(default)s)')
     parser.add_argument(
-        '--D_lr', type=float, default=2e-3,
+        '--D_lr', type=float, default=1e-2,
         help='Learning rate to use for Discriminator (default: %(default)s)')
     parser.add_argument(
         '--G_B1', type=float, default=0.5,
@@ -247,10 +253,8 @@ def name_from_config(config):
             'seed%d' % config['seed'],
             'idim%d' % config['idim'],
             config['trainer'],
-            config['train_mode'],
             config['estimate'],
             'warmup%d' % config['warmup'],
-            'sn%d' % config['sn'],
             config['G_model'],
             config['D_model'],
             'Diter%d' % config['num_D_steps'],
@@ -258,7 +262,8 @@ def name_from_config(config):
             'SRC_weight%3.2f' % config['SRC_weight'],
             'TAR_weight%3.2f' % config['TAR_weight'],
             'useMB%d' % config['useMB'],
-            'mlp_nodes%d' % config['mlp_nodes'],
+            'G_mlp_nodes%d' % config['G_mlp_nodes'],
+            'D_mlp_nodes%d' % config['D_mlp_nodes'],
             'bs%d' % config['batch_size'],
             'Glr%2.1e' % config['G_lr'],
             'Dlr%2.1e' % config['D_lr'],
