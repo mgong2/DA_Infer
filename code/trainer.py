@@ -738,7 +738,7 @@ class DA_Infer_JMMD(object):
         output_cf = self.dis(fake_x_a)
 
         # Train mode 0: only use MMD for G
-        if state['epoch'] < config['warmup'] or state['train_mode'] == 'm0':
+        if state['epoch'] < config['warmup'] or config['train_mode'] == 'm0':
             lambda_tar = 0
         else:
             lambda_tar = config['TAR_weight']
