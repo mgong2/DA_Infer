@@ -8,7 +8,6 @@ from collections import defaultdict
 import itertools
 import torch.nn.utils.spectral_norm as sn
 import torch.nn.functional as F
-from common_net import *
 
 
 #  mlp model
