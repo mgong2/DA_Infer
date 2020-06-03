@@ -254,6 +254,7 @@ def name_from_config(config):
             'idim%d' % config['idim'],
             config['trainer'],
             config['estimate'],
+            config['train_mode'],
             'warmup%d' % config['warmup'],
             config['G_model'],
             config['D_model'],

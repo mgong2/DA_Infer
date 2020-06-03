@@ -19,8 +19,8 @@ class DA_Poolnn(object):
     def __init__(self, config):
         input_dim = config['idim']
         num_class = config['num_class']
-        num_layer = config['mlp_layers']
-        num_nodes = config['mlp_nodes']
+        num_layer = config['D_mlp_layers']
+        num_nodes = config['D_mlp_nodes']
 
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_Classifier':
@@ -675,18 +675,20 @@ class DA_Infer_JMMD(object):
         dim_class = config['dim_y']
         dim_domain = config['dim_d']
         dim_hidden = config['dim_z']
-        num_layer = config['mlp_layers']
-        num_nodes = config['mlp_nodes']
+        G_num_layer = config['G_mlp_layers']
+        G_num_nodes = config['G_mlp_nodes']
+        D_num_layer = config['D_mlp_layers']
+        D_num_nodes = config['D_mlp_nodes']
         is_reg = config['is_reg']
 
         isProb = config['estimate'] == 'Bayesian'
         if config['G_model'] == 'MLP_Generator':
-            self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, prob=isProb)
+            self.gen = MLP_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, G_num_layer,
+                                     G_num_nodes, is_reg, prob=isProb)
         # Seed RNG
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_Classifier':
-            self.dis = MLP_Classifier(input_dim, num_class, num_layer, num_nodes)
+            self.dis = MLP_Classifier(input_dim, num_class, D_num_layer, D_num_nodes)
 
         # set optimizers
         self.gen_opt = torch.optim.Adam(self.gen.parameters(), lr=config['G_lr'], betas=(config['G_B1'], config['G_B2']))
@@ -845,8 +847,10 @@ class DA_Infer_JMMD_DAG(object):
         dim_class = config['dim_y']
         dim_domain = config['dim_d']
         dim_hidden = config['dim_z']
-        num_layer = config['mlp_layers']
-        num_nodes = config['mlp_nodes']
+        G_num_layer = config['G_mlp_layers']
+        G_num_nodes = config['G_mlp_nodes']
+        D_num_layer = config['D_mlp_layers']
+        D_num_nodes = config['D_mlp_nodes']
         is_reg = config['is_reg']
         dag_mat_file = join(config['data_root'], config['dataset'], config['dag_mat_file'])
         npzfile = np.load(dag_mat_file)
@@ -854,24 +858,24 @@ class DA_Infer_JMMD_DAG(object):
 
         isProb = config['estimate'] == 'Bayesian'
         if config['G_model'] == 'DAG_Generator':
-            self.gen = DAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, dag_mat, prob=isProb)
+            self.gen = DAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, G_num_layer,
+                                     G_num_nodes, is_reg, dag_mat, prob=isProb)
         if config['G_model'] == 'PDAG_Generator':
-            self.gen = PDAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, num_layer,
-                                     num_nodes, is_reg, dag_mat, prob=isProb)
+            self.gen = PDAG_Generator(input_dim, num_class, num_domain, dim_class, dim_domain, dim_hidden, G_num_layer,
+                                     G_num_nodes, is_reg, dag_mat, prob=isProb)
 
         utils.seed_rng(config['seed'])
         if config['D_model'] == 'MLP_Classifier':
-            self.dis = MLP_Classifier(input_dim, num_class, num_layer, num_nodes)
+            self.dis = MLP_Classifier(input_dim, num_class, D_num_layer, D_num_nodes)
 
         # set optimizer
         self.gen_opt = torch.optim.Adam(self.gen.parameters(), lr=config['G_lr'],
                                         betas=(config['G_B1'], config['G_B2']))
         self.dis_opt = torch.optim.Adam(self.dis.parameters(), lr=config['D_lr'],
                                         betas=(config['D_B1'], config['D_B2']))
-        if not config['skip_init']:
-            self.gen.apply(utils.xavier_weights_init)
-            self.dis.apply(utils.xavier_weights_init)
+        # if not config['skip_init']:
+        #     self.gen.apply(utils.xavier_weights_init)
+        #     self.dis.apply(utils.xavier_weights_init)
 
         self.aux_loss_func = nn.CrossEntropyLoss()
         self.mmd_loss = 0
@@ -918,10 +922,10 @@ class DA_Infer_JMMD_DAG(object):
             fake_x_a_cls = self.gen(noise, y_a_onehot, d_onehot, device=device, noise_d=noise_d)
 
         # sigma for MMD
-        base_x = config['base_x']
+        base_x = config['base_x']/x_a.shape[1]
         base_y = config['base_y']
         # sigma_list = [0.125, 0.25, 0.5, 1]
-        sigma_list = [0.1, 0.25, 0.5, 1, 2]
+        sigma_list = [0.1, 0.25, 0.5, 1, 2] 
         sigma_listx = [sigma * base_x for sigma in sigma_list]
         sigma_listy = [sigma * base_y for sigma in sigma_list]
 
@@ -931,7 +935,7 @@ class DA_Infer_JMMD_DAG(object):
         output_cf = self.dis(fake_x_a_cls)
 
         # Train mode 0: only use MMD for G
-        if state['epoch'] < config['warmup'] or state['train_mode'] == 0:
+        if state['epoch'] < config['warmup'] or config['train_mode'] == 'm0':
             lambda_tar = 0
         else:
             lambda_tar = config['TAR_weight']

@@ -8,6 +8,7 @@ import torch
 import utils
 import torchvision
 import itertools
+from shutil import rmtree
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import pairwise_distances
 import torch.nn.functional as F
@@ -85,6 +86,8 @@ def run(config):
 
     # config tensorboard writer
     log_folder = os.path.join(config['logs_root'], experiment_name)
+    if os.path.exists(log_folder):
+        rmtree(log_folder)
     writer = SummaryWriter(log_folder)
 
     # load datasets
@@ -102,16 +105,18 @@ def run(config):
     test_loader = utils.get_data_loader(test_dataset_specs, batch_size, config['num_workers'])
 
     # compute pairwise distance for kernel width
-    if config['trainer'] == 'DA_Infer_JMMD':
-        pair_dist = pairwise_distances(train_loader.dataset.data)
-        config['base_x'] = np.median(pair_dist)
-    elif config['trainer'] == 'DA_Infer_JMMD_DAG':
-        idim = config['idim']
-        pair_dist_median = np.zeros(idim)
-        for i in range(idim):
-            pair_dist = pairwise_distances(train_loader.dataset.data[:, i].reshape(-1, 1))
-            pair_dist_median[i] = np.median(pair_dist)
-        config['base_x'] = np.mean(pair_dist_median)
+    # if config['trainer'] == 'DA_Infer_JMMD':
+    #     pair_dist = pairwise_distances(train_loader.dataset.data)
+    #     config['base_x'] = np.median(pair_dist)
+    # elif config['trainer'] == 'DA_Infer_JMMD_DAG':
+    #     idim = config['idim']
+    #     pair_dist_median = np.zeros(idim)
+    #     for i in range(idim):
+    #         pair_dist = pairwise_distances(train_loader.dataset.data[:, i].reshape(-1, 1))
+    #         pair_dist_median[i] = np.median(pair_dist)
+    #     config['base_x'] = np.mean(pair_dist_median)
+    pair_dist = pairwise_distances(train_loader.dataset.data)
+    config['base_x'] = np.median(pair_dist)
     pair_dist = pairwise_distances(train_loader.dataset.labels)
     config['base_y'] = np.median(pair_dist)
 
@@ -142,6 +147,7 @@ def run(config):
             y = y.to(device).view(x.size(0), 2)
 
             trainer.gen_update(x, y, config, state_dict, device)
+            trainer.dis_update(x, y, config, state_dict, device)
 
             # Dump training stats in log file
             if (iterations + 1) % config['save_every'] == 0:
