@@ -12,6 +12,7 @@ from dataset_flow import *
 from dataset_wifi import *
 from dataset_mnistr import *
 from dataset_digits import *
+from dataset_simul import *
 import torch.nn as nn
 
 ## Default value set for dataset flow and DA_Infer_MMD trainer
@@ -291,8 +292,15 @@ def get_data_loader(conf, batch_size, num_workers):
         dataset = DatasetDigits4(conf)
     elif conf['class_name'] == 'DatasetFlow3':
         dataset = DatasetFlow3(conf)
+    elif conf['class_name'] == 'DatasetSimuDAG2':
+        dataset = DatasetSimuDAG2(conf)
+    elif conf['class_name'] == 'DatasetSimuDAG5':
+        dataset = DatasetSimuDAG2(conf)
+    elif conf['class_name'] == 'DatasetSimuDAG9':
+        dataset = DatasetSimuDAG2(conf)
     else:
-        dataset = None
+        raise ValueError("No support for the dataset: {}.".format(conf['class_name']))
+
     return torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
 

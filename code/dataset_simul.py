@@ -118,9 +118,9 @@ class dataset_simul_mog(data.Dataset):
         return self.num
 
 
-class DatasetSimulDAG2(data.Dataset):
+class DatasetSimuDAG2(data.Dataset):
     def __init__(self, specs):
-        super(DatasetSimulDAG2, self).__init__()
+        super(DatasetSimuDAG2, self).__init__()
         self.root = specs['root']
         self.id = specs['seed']
         self.train = specs['train']
@@ -156,9 +156,9 @@ class DatasetSimulDAG2(data.Dataset):
         return self.num
 
 
-class DatasetSimulDAG5(data.Dataset):
+class DatasetSimuDAG5(data.Dataset):
     def __init__(self, specs):
-        super(DatasetSimulDAG5, self).__init__()
+        super(DatasetSimuDAG5, self).__init__()
         self.root = specs['root']
         self.id = specs['seed']
         self.train = specs['train']
@@ -194,9 +194,9 @@ class DatasetSimulDAG5(data.Dataset):
         return self.num
 
 
-class DatasetSimulDAG9(data.Dataset):
+class DatasetSimuDAG9(data.Dataset):
     def __init__(self, specs):
-        super(DatasetSimulDAG9, self).__init__()
+        super(DatasetSimuDAG9, self).__init__()
         self.root = specs['root']
         self.id = specs['seed']
         self.train = specs['train']
