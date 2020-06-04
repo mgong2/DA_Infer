@@ -295,9 +295,9 @@ def get_data_loader(conf, batch_size, num_workers):
     elif conf['class_name'] == 'DatasetSimuDAG2':
         dataset = DatasetSimuDAG2(conf)
     elif conf['class_name'] == 'DatasetSimuDAG5':
-        dataset = DatasetSimuDAG2(conf)
+        dataset = DatasetSimuDAG5(conf)
     elif conf['class_name'] == 'DatasetSimuDAG9':
-        dataset = DatasetSimuDAG2(conf)
+        dataset = DatasetSimuDAG9(conf)
     else:
         raise ValueError("No support for the dataset: {}.".format(conf['class_name']))
 
