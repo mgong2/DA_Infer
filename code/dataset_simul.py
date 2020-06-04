@@ -116,3 +116,117 @@ class dataset_simul_mog(data.Dataset):
 
     def __len__(self):
         return self.num
+
+
+class DatasetSimulDAG2(data.Dataset):
+    def __init__(self, specs):
+        super(DatasetSimulDAG2, self).__init__()
+        self.root = specs['root']
+        self.id = specs['seed']
+        self.train = specs['train']
+        self.num_class = specs['num_class']
+        self.num_domain = specs['num_domain']
+        self.sample_size = specs['num_train']
+        self.dim = specs['dim']
+        self.dagMatFile = specs['dag_mat_file']
+        full_path = join(self.root, 'to%d_numData%d' % (self.id, self.sample_size))
+
+        if os.path.isfile(full_path+'.npz'):
+            npzfile = np.load(full_path+'.npz')
+            x = npzfile['x']
+            y = npzfile['y']
+
+        self.test_id = self.num_domain - 1
+
+        if self.train:
+            self.data = x
+            self.labels = y
+        else:
+            self.data = x[y[:, 1] == self.test_id, :]
+            self.labels = y[y[:, 1] == self.test_id, :]
+
+        self.num = len(self.labels)
+
+    def __getitem__(self, index):
+        img, labels = self.data[index], self.labels[index]
+        label = torch.LongTensor([np.int64(labels)])
+        return np.float32(img), label
+
+    def __len__(self):
+        return self.num
+
+
+class DatasetSimulDAG5(data.Dataset):
+    def __init__(self, specs):
+        super(DatasetSimulDAG5, self).__init__()
+        self.root = specs['root']
+        self.id = specs['seed']
+        self.train = specs['train']
+        self.num_class = specs['num_class']
+        self.num_domain = specs['num_domain']
+        self.sample_size = specs['num_train']
+        self.dim = specs['dim']
+        self.dagMatFile = specs['dag_mat_file']
+        full_path = join(self.root, 'to%d_numData%d' % (self.id, self.sample_size))
+
+        if os.path.isfile(full_path + '.npz'):
+            npzfile = np.load(full_path + '.npz')
+            x = npzfile['x']
+            y = npzfile['y']
+
+        self.test_id = self.num_domain - 1
+
+        if self.train:
+            self.data = x
+            self.labels = y
+        else:
+            self.data = x[y[:, 1] == self.test_id, :]
+            self.labels = y[y[:, 1] == self.test_id, :]
+
+        self.num = len(self.labels)
+
+    def __getitem__(self, index):
+        img, labels = self.data[index], self.labels[index]
+        label = torch.LongTensor([np.int64(labels)])
+        return np.float32(img), label
+
+    def __len__(self):
+        return self.num
+
+
+class DatasetSimulDAG9(data.Dataset):
+    def __init__(self, specs):
+        super(DatasetSimulDAG9, self).__init__()
+        self.root = specs['root']
+        self.id = specs['seed']
+        self.train = specs['train']
+        self.num_class = specs['num_class']
+        self.num_domain = specs['num_domain']
+        self.sample_size = specs['num_train']
+        self.dim = specs['dim']
+        self.dagMatFile = specs['dag_mat_file']
+        full_path = join(self.root, 'to%d_numData%d' % (self.id, self.sample_size))
+
+        if os.path.isfile(full_path + '.npz'):
+            npzfile = np.load(full_path + '.npz')
+            x = npzfile['x']
+            y = npzfile['y']
+
+        self.test_id = self.num_domain - 1
+
+        if self.train:
+            self.data = x
+            self.labels = y
+        else:
+            self.data = x[y[:, 1] == self.test_id, :]
+            self.labels = y[y[:, 1] == self.test_id, :]
+
+        self.num = len(self.labels)
+
+    def __getitem__(self, index):
+        img, labels = self.data[index], self.labels[index]
+        label = torch.LongTensor([np.int64(labels)])
+        return np.float32(img), label
+
+    def __len__(self):
+        return self.num
