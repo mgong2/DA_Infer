@@ -64,7 +64,7 @@ def prepare_parser():
         '--trainer', type=str, default='DA_Infer_JMMD',
         help='train functions (default: %(default)s)')
     parser.add_argument(
-        '--train_mode', type=str, default='m1',
+        '--train_mode', type=str, default='m0',
         help='train modes (default: %(default)s)')
     parser.add_argument(
         '--estimate', type=str, default='ML',
@@ -79,7 +79,7 @@ def prepare_parser():
              '(default: %(default)s)')
     parser.add_argument(
         '--SRC_weight', type=float, default=1.0,
-        help='target domain classifier weight '
+        help='source domain classifier weight '
              '(default: %(default)s)')
     parser.add_argument(
         '--TAR_weight', type=float, default=0.1,
@@ -107,13 +107,13 @@ def prepare_parser():
         '--G_mlp_layers', type=int, default=1,
         help='number of MLP hidden layers (default: %(default)s)')
     parser.add_argument(
-        '--G_mlp_nodes', type=int, default=30,
+        '--G_mlp_nodes', type=int, default=32,
         help='number of nodes in each MLP hidden layer (default: %(default)s)')
     parser.add_argument(
         '--D_mlp_layers', type=int, default=1,
         help='number of MLP hidden layers (default: %(default)s)')
     parser.add_argument(
-        '--D_mlp_nodes', type=int, default=100,
+        '--D_mlp_nodes', type=int, default=64,
         help='number of nodes in each MLP hidden layer (default: %(default)s)')
     parser.add_argument(
         '--dim_z', type=int, default=4,
@@ -129,7 +129,7 @@ def prepare_parser():
         help='is regression?: %(default)s)')
     parser.add_argument(
         '--useMB', action='store_false',
-        help='is regression?: %(default)s)')
+        help='use Markov Blanket?: %(default)s)')
     parser.add_argument(
         '--dag_mat_file', type=str, default='dag_mat.npz',
         help='DAG matrix file: %(default)s)')
@@ -280,28 +280,8 @@ def name_from_config(config):
 
 def get_data_loader(conf, batch_size, num_workers):
     print("dataset=%s(conf)" % conf['class_name'])
-    if conf['class_name'] == 'DatasetFlow5':
-        dataset = DatasetFlow5(conf)
-    elif conf['class_name'] == 'DatasetWifi':
-        dataset = DatasetWifi(conf)
-    elif conf['class_name'] == 'DatasetMNISTR3':
-        dataset = DatasetMNISTR3(conf)
-    elif conf['class_name'] == 'DatasetMNISTR4':
-        dataset = DatasetMNISTR4(conf)
-    elif conf['class_name'] == 'DatasetDigits4':
-        dataset = DatasetDigits4(conf)
-    elif conf['class_name'] == 'DatasetFlow3':
-        dataset = DatasetFlow3(conf)
-    elif conf['class_name'] == 'DatasetSimuDAG2':
-        dataset = DatasetSimuDAG2(conf)
-    elif conf['class_name'] == 'DatasetSimuDAG5':
-        dataset = DatasetSimuDAG5(conf)
-    elif conf['class_name'] == 'DatasetSimuDAG9':
-        dataset = DatasetSimuDAG9(conf)
-    else:
-        raise ValueError("No support for the dataset: {}.".format(conf['class_name']))
-
-    return torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    exec("dataset=%s(conf)" % conf['class_name'])
+    return torch.utils.data.DataLoader(dataset=locals()['dataset'], batch_size=batch_size, shuffle=True, num_workers=2)
 
 
 def gaussian_weights_init(m):

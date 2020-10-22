@@ -889,9 +889,10 @@ class DA_Infer_JMMD_DAG(object):
 
     # separate training of each module, trained on source + target domain together
     def gen_update(self, x_a, y_a, config, state, device='cpu'):
-        for p in self.dis.parameters():
-            p.requires_grad_(False)
+        # for p in self.dis.parameters():
+        #     p.requires_grad_(False)
         self.gen.zero_grad()
+        self.dis.zero_grad()
         input_dim = config['idim']
         dim_domain = config['dim_d']
         batch_size = config['batch_size']
@@ -922,33 +923,36 @@ class DA_Infer_JMMD_DAG(object):
             fake_x_a_cls = self.gen(noise, y_a_onehot, d_onehot, device=device, noise_d=noise_d)
 
         # sigma for MMD
-        base_x = config['base_x']/x_a.shape[1]
-        base_y = config['base_y']
-        # sigma_list = [0.125, 0.25, 0.5, 1]
-        sigma_list = [0.1, 0.25, 0.5, 1, 2] 
+        base_x = config['base_x']
+        sigma_list = [0.125, 0.25, 0.5, 1]
+        # sigma_list = [0.25, 0.5, 1]
         sigma_listx = [sigma * base_x for sigma in sigma_list]
-        sigma_listy = [sigma * base_y for sigma in sigma_list]
 
         ids_s = y_a[:, 1] != num_domain - 1
         ids_t = y_a[:, 1] == num_domain - 1
-        # output_cr = self.dis(x_a[ids_s])
-        output_cf = self.dis(fake_x_a_cls)
 
         # Train mode 0: only use MMD for G
-        if state['epoch'] < config['warmup'] or config['train_mode'] == 'm0':
-            lambda_tar = 0
-        else:
-            lambda_tar = config['TAR_weight']
-        # lambda_src = config['SRC_weight']
-        # aux_loss_c_src = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0])
-        aux_loss_c_tar = lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
-        aux_loss_c = lambda_tar * aux_loss_c_tar
+        if config['train_mode'] == 'm0':  # no bp from classifier C to G
+            output_cf = self.dis(fake_x_a_cls.detach())
+            aux_loss_c = self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
+
+        if config['train_mode'] == 'm1':  # bp from classifier C to G
+            output_cr = self.dis(x_a[ids_s])
+            output_cf = self.dis(fake_x_a_cls)
+            lambda_src = config['SRC_weight']
+            if state['epoch'] < config['warmup']:
+                lambda_tar = 0
+            else:
+                lambda_tar = config['TAR_weight']
+            aux_loss_c_src = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0])
+            aux_loss_c_tar = lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
+            aux_loss_c = aux_loss_c_src + aux_loss_c_tar
 
         # MMD matching for each factor
         batch_size_s = len(y_a[ids_s, :])
-        batch_size_t = len(y_a[ids_t, :])
+        # batch_size_t = len(y_a[ids_t, :])
         errG_s = torch.zeros(len(self.gen.nodeSort), device=device)
-        errG_t = torch.zeros(len(self.gen.nodeSort), device=device)
+        # errG_t = torch.zeros(len(self.gen.nodeSort), device=device)
 
         for i in self.gen.nodeSort:
             input_pDim = self.gen.numInput[i]
@@ -971,49 +975,40 @@ class DA_Infer_JMMD_DAG(object):
                         index = list(itertools.chain.from_iterable(index))
                         index = [int(j) for j in index]
                 input_p = x_a[:, index].view(batch_size, len(index))
-                if not is_reg:
-                    errG_s[i] = mix_rbf_mmd2_joint(fake_x_a[ids_s, self.gen.nodesA[i]].view(batch_size_s, output_dim),
-                                                 x_a[ids_s, self.gen.nodesA[i]].view(batch_size_s, output_dim),
-                                                 y_a_onehot[ids_s], y_a_onehot[ids_s], d_onehot[ids_s],
-                                                 d_onehot[ids_s], input_p[ids_s], input_p[ids_s], sigma_list=sigma_listx)
-                else:
-                    errG_s[i] = mix_rbf_mmd2_joint_regress(fake_x_a[ids_s, self.gen.nodesA[i]].view(batch_size_s, output_dim),
-                                                         x_a[ids_s, self.gen.nodesA[i]].view(batch_size_s, output_dim),
-                                                         y_a_onehot[ids_s], y_a_onehot[ids_s], d_onehot[ids_s],
-                                                         d_onehot[ids_s], input_p[ids_s], input_p[ids_s], sigma_list=sigma_listx,
-                                                         sigma_list1=sigma_listy)
-                errG_t[i] = mix_rbf_mmd2_joint_regress(fake_x_a[ids_t, self.gen.nodesA[i]].view(batch_size_t, output_dim),
-                                                     x_a[ids_t, self.gen.nodesA[i]].view(batch_size_t, output_dim),
-                                                     input_p[ids_t], input_p[ids_t], sigma_list=sigma_listx, sigma_list1=sigma_listy)
+                errG_s[i] = mix_rbf_mmd2_joint(fake_x_a[ids_s, self.gen.nodesA[i]].view(batch_size_s, output_dim),
+                                             x_a[ids_s, self.gen.nodesA[i]].view(batch_size_s, output_dim),
+                                             y_a_onehot[ids_s], y_a_onehot[ids_s], d_onehot[ids_s],
+                                             d_onehot[ids_s], input_p[ids_s], input_p[ids_s], sigma_list=sigma_listx)
+
+                # errG_t[i] = mix_rbf_mmd2_joint_regress(fake_x_a[ids_t, self.gen.nodesA[i]].view(batch_size_t, output_dim),
+                #                                      x_a[ids_t, self.gen.nodesA[i]].view(batch_size_t, output_dim),
+                #                                      input_p[ids_t], input_p[ids_t], sigma_list=sigma_listx, sigma_list1=sigma_listx)
             else:
                 if not self.gen.ischain:
                     output_dim = 1
                 else:
                     output_dim = len(self.gen.nodesA[i])
-                if not is_reg:
-                    errG_s[i] = mix_rbf_mmd2_joint(fake_x_a[ids_s][:, self.gen.nodesA[i]].view(batch_size_s, output_dim),
-                                                 x_a[ids_s][:, self.gen.nodesA[i]].view(batch_size_s, output_dim),
-                                                 y_a_onehot[ids_s], y_a_onehot[ids_s], d_onehot[ids_s],
-                                                 d_onehot[ids_s], sigma_list=sigma_listx)
-                else:
-                    errG_s[i] = mix_rbf_mmd2_joint_regress(fake_x_a[ids_s][:, self.gen.nodesA[i]].view(batch_size_s, output_dim),
-                                                         x_a[ids_s][:, self.gen.nodesA[i]].view(batch_size_s, output_dim),
-                                                         y_a_onehot[ids_s], y_a_onehot[ids_s], d_onehot[ids_s],
-                                                         d_onehot[ids_s], sigma_list=sigma_listx, sigma_list1=sigma_listy)
-                errG_t[i] = mix_rbf_mmd2(fake_x_a[ids_t][:, self.gen.nodesA[i]].view(batch_size_t, output_dim),
-                                       x_a[ids_t][:, self.gen.nodesA[i]].view(batch_size_t, output_dim), sigma_list=sigma_listx)
+                errG_s[i] = mix_rbf_mmd2_joint(fake_x_a[ids_s][:, self.gen.nodesA[i]].view(batch_size_s, output_dim),
+                                             x_a[ids_s][:, self.gen.nodesA[i]].view(batch_size_s, output_dim),
+                                             y_a_onehot[ids_s], y_a_onehot[ids_s], d_onehot[ids_s],
+                                             d_onehot[ids_s], sigma_list=sigma_listx)
+                # errG_t[i] = mix_rbf_mmd2(fake_x_a[ids_t][:, self.gen.nodesA[i]].view(batch_size_t, output_dim),
+                #                        x_a[ids_t][:, self.gen.nodesA[i]].view(batch_size_t, output_dim), sigma_list=sigma_listx)
+
+        errG_t = mix_rbf_mmd2(fake_x_a_cls[ids_t], x_a[ids_t], sigma_list=sigma_listx)
 
         errG_s = errG_s.mean()
-        errG_t = errG_t.mean()
+        # errG_t = errG_t.mean()
 
         lambda_c = config['AC_weight']
         if config['estimate'] == 'ML':
-            errG = (num_domain-1)**2 * errG_s + errG_t + lambda_c * aux_loss_c
+            errG = errG_s + errG_t + lambda_c * aux_loss_c
         elif config['estimate'] == 'Bayesian':
-            errG = (num_domain-1)**2 * errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze())
+            errG = errG_s + errG_t + lambda_c * aux_loss_c + torch.dot(1.0 / do_ss.to(device).squeeze(), KL_reg.squeeze())
 
         errG.backward()
         self.gen_opt.step()
+        self.dis_opt.step()
         self.mmd_loss = errG
         self.mmd_loss_s = errG_s
         self.mmd_loss_t = errG_t
@@ -1054,11 +1049,11 @@ class DA_Infer_JMMD_DAG(object):
         ids_t = y_a[:, 1] == num_domain - 1
         output_cr = self.dis(x_a[ids_s])
         output_cf = self.dis(fake_x_a_cls.detach())
-        lambda_tar = config['TAR_weight']
         lambda_src = config['SRC_weight']
+        lambda_tar = config['TAR_weight']
         aux_loss_c_src = lambda_src * self.aux_loss_func(output_cr, y_a[ids_s, 0])
         aux_loss_c_tar = lambda_tar * self.aux_loss_func(output_cf[ids_t], y_a[ids_t, 0])
-        aux_loss_c = lambda_src * aux_loss_c_src + lambda_tar * aux_loss_c_tar
+        aux_loss_c = aux_loss_c_src + aux_loss_c_tar
         aux_loss_c.backward()
         self.dis_opt.step()
         self.aux_loss_c = aux_loss_c

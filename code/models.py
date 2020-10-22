@@ -61,7 +61,7 @@ class MLP_Generator(nn.Module):
         if prob:
             # VAE posterior parameters, Gaussian
             self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
-            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
+            self.sigma = nn.Parameter(torch.zeros(do_num, do_dim))
         else:
             self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
@@ -74,13 +74,13 @@ class MLP_Generator(nn.Module):
         else:
             output_c = self.lc(input_c)
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
+            theta = self.mu + torch.mul(torch.log(1+torch.exp(self.sigma)), noise_d)
             output_d = torch.matmul(input_d, theta)
         else:
             output_d = self.ld(input_d)
         output = self.decoder(torch.cat((output_c, output_d, noise), axis=1))
         if self.prob:
-            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            KL_reg = 1 + torch.log(torch.log(1+torch.exp(self.sigma))**2) - self.mu**2 - torch.log(1+torch.exp(self.sigma))**2
             if KL_reg.shape[1] > 1:
                 KL_reg = KL_reg.sum(axis=1)
             return output, -KL_reg
@@ -253,7 +253,7 @@ class DAG_Generator(nn.Module):
         if prob:
             # VAE posterior parameters, Gaussian
             self.mu = nn.Parameter(torch.zeros(do_num, do_dim * i_dim))
-            self.sigma = nn.Parameter(torch.ones(do_num, do_dim * i_dim))
+            self.sigma = nn.Parameter(torch.zeros(do_num, do_dim * i_dim))
         else:
             self.dnet = nn.Linear(do_num, do_dim * i_dim, bias=False)
         if not is_reg:
@@ -293,7 +293,7 @@ class DAG_Generator(nn.Module):
         else:
             inputs_c = self.cnet(input_c)
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
+            theta = self.mu + torch.mul(torch.log(1+torch.exp(self.sigma)), noise_d)
             inputs_d = torch.matmul(input_d, theta)
         else:
             inputs_d = self.dnet(input_d)
@@ -327,7 +327,7 @@ class DAG_Generator(nn.Module):
             output[:, i] = self.nets[i](inputs_i).squeeze()
 
         if self.prob:
-            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            KL_reg = 1 + torch.log(torch.log(1+torch.exp(self.sigma))**2) - self.mu**2 - torch.log(1+torch.exp(self.sigma))**2
             if KL_reg.shape[1] > 1:
                 KL_reg = KL_reg.sum(axis=1)
             return output, -KL_reg
@@ -344,7 +344,7 @@ class DAG_Generator(nn.Module):
         else:
             inputs_c = self.cnet(input_c)
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
+            theta = self.mu + torch.mul(torch.log(1+torch.exp(self.sigma)), noise_d)
             inputs_d = torch.matmul(input_d, theta)
         else:
             inputs_d = self.dnet(input_d)
@@ -496,7 +496,7 @@ class PDAG_Generator(nn.Module):
         else:
             inputs_c = self.cnet(input_c)
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d[:, :self.i_dimNew * self.do_dim])
+            theta = self.mu + torch.mul(torch.log(1+torch.exp(self.sigma)), noise_d[:, :self.i_dimNew * self.do_dim])
             inputs_d = torch.matmul(input_d, theta)
         else:
             inputs_d = self.dnet(input_d)
@@ -536,7 +536,7 @@ class PDAG_Generator(nn.Module):
 
             output[:, self.nodesA[i]] = self.nets[i](input_i)
         if self.prob:
-            KL_reg = 1 + torch.log(self.sigma ** 2) - self.mu ** 2 - self.sigma ** 2
+            KL_reg = 1 + torch.log(torch.log(1+torch.exp(self.sigma)) ** 2) - self.mu ** 2 - torch.log(1+torch.exp(self.sigma)) ** 2
             if KL_reg.shape[1] > 1:
                 KL_reg = KL_reg.sum(axis=1)
             return output, -KL_reg
@@ -554,7 +554,8 @@ class PDAG_Generator(nn.Module):
             inputs_c = self.cnet(input_c)
         if self.prob:
             # theta = self.mu + torch.mul(self.sigma, noise_d)
-            theta = self.mu + torch.mul(self.sigma, noise_d[:, :self.i_dimNew * self.do_dim])
+            theta = self.mu + torch.mul(torch.log(1+torch.exp(self.sigma)), noise_d[:, :self.i_dimNew * self.do_dim])
+
             inputs_d = torch.matmul(input_d, theta)
         else:
             inputs_d = self.dnet(input_d)
@@ -705,7 +706,7 @@ class CNN_Generator(nn.Module):
         if prob:
             # VAE posterior parameters, Gaussian
             self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
-            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
+            self.sigma = nn.Parameter(torch.zeros(do_num, do_dim))
         else:
             self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
@@ -729,7 +730,7 @@ class CNN_Generator(nn.Module):
     def forward(self, noise, input_c, input_d, noise_d=None):
         embed_c = self.lc(input_c)
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
+            theta = self.mu + torch.mul(torch.log(1+torch.exp(self.sigma)), noise_d)
             embed_d = torch.matmul(input_d, theta)
         else:
             embed_d = self.ld(input_d)
@@ -737,7 +738,7 @@ class CNN_Generator(nn.Module):
         output = output.view(output.size(0), self.ch*4, 4, 4)
         output = self.decoder2(output)
         if self.prob:
-            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            KL_reg = 1 + torch.log(torch.log(1+torch.exp(self.sigma))**2) - self.mu**2 - torch.log(1+torch.exp(self.sigma))**2
             if KL_reg.shape[1] > 1:
                 KL_reg = KL_reg.sum(axis=1)
             return output, -KL_reg
@@ -754,7 +755,7 @@ class CNN_Generator_Exp(nn.Module):
         if prob:
             # VAE posterior parameters, Gaussian
             self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
-            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
+            self.sigma = nn.Parameter(torch.zeros(do_num, do_dim))
         else:
             self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
@@ -778,7 +779,7 @@ class CNN_Generator_Exp(nn.Module):
     def forward(self, noise, input_c, input_d, noise_d=None):
         embed_c = self.lc(input_c)
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
+            theta = self.mu + torch.mul(torch.log(1+torch.exp(self.sigma)), noise_d)
             embed_d = torch.matmul(input_d, theta)
         else:
             embed_d = self.ld(input_d)
@@ -786,7 +787,7 @@ class CNN_Generator_Exp(nn.Module):
         output = output.view(-1, self.ch*4, 4, 4)
         output = self.decoder2(output)
         if self.prob:
-            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            KL_reg = 1 + torch.log(torch.log(1+torch.exp(self.sigma))**2) - self.mu**2 - torch.log(1+torch.exp(self.sigma))**2
             if KL_reg.shape[1] > 1:
                 KL_reg = KL_reg.sum(axis=1)
             return output, -KL_reg
@@ -932,7 +933,7 @@ class RES_Generator(nn.Module):
         if prob:
             # VAE posterior parameters, Gaussian
             self.mu = nn.Parameter(torch.zeros(do_num, do_dim))
-            self.sigma = nn.Parameter(torch.ones(do_num, do_dim))
+            self.sigma = nn.Parameter(torch.zeros(do_num, do_dim))
         else:
             self.ld = nn.Linear(do_num, do_dim, bias=False)
         self.lc = nn.Linear(cl_num, cl_dim, bias=False)
@@ -950,7 +951,7 @@ class RES_Generator(nn.Module):
     def forward(self, noise, input_c, input_d, noise_d=None):
         embed_c = self.lc(input_c)
         if self.prob:
-            theta = self.mu + torch.mul(self.sigma, noise_d)
+            theta = self.mu + torch.mul(torch.log(1+torch.exp(self.sigma)), noise_d)
             embed_d = torch.matmul(input_d, theta)
         else:
             embed_d = self.ld(input_d)
@@ -959,7 +960,7 @@ class RES_Generator(nn.Module):
         z_cat = z_cat.view(z_cat.size(0), self.ch, 4, 4)
         output = self.decoder(z_cat)
         if self.prob:
-            KL_reg = 1 + torch.log(self.sigma**2) - self.mu**2 - self.sigma**2
+            KL_reg = 1 + torch.log(torch.log(1+torch.exp(self.sigma))**2) - self.mu**2 - torch.log(1+torch.exp(self.sigma))**2
             if KL_reg.shape[1] > 1:
                 KL_reg = KL_reg.sum(axis=1)
             return output, -KL_reg

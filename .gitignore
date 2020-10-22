@@ -1,4 +1,6 @@
 data/
+notebooks
+.ipynb_checkpoints/
 scripts/
 logs/
 weights/
