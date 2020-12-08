@@ -1,4 +1,4 @@
-data/
+data_local/
 notebooks/
 .ipynb_checkpoints/
 scripts/
