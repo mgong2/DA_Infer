@@ -29,4 +29,4 @@ Evaluation is provided in the 'train.py' code.
 2. We test the standard classification accuracy on the sampled testing set.
 
 ## Results
-See table 1 in the main paper.
+See table 4 in the main paper.
