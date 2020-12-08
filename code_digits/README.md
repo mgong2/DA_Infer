@@ -18,7 +18,7 @@ Please download the datasets [here](https://drive.google.com/open?id=1yneOon1U5U
 To train the model(s) in the paper,  run the following command:
 1. train LV-CGAN networks, specify the parameter --target_dataset to change the target domain dataset
 ```
-bash scripts/twin_ac_launch_mnist_mnist.sh
+bash twin_ac_launch_mnist_mnist.sh
 ```
 (We randomly sample 20,000 paired images from the training set for each dataset. The subsampling process is implemented in the 'train.py'). To be notated, the labels for the target dataset are not allowed to use in our training code and this is implemented in the 'train_fns.py'.
 
