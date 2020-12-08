@@ -1,25 +1,13 @@
-This experimental code provides simulation results in Table 1.
-
 ## Requirements
 Python 3.6
 Pytorch >= 1.0.0
 
 ## Training
 
-To train the model(s) in the paper, run these commands:
-1. train LV-CGAN networks according to the graph
-```
-bash run_jobs_train.sh
-```
-2. Infer target domain labels
-```infer
-bash run_jobs_infer_bayesian.sh
-```
+To train the model(s) in the paper, run the command:
 
-## Evaluation
-Run the following script to collect the results.
-```summary
-python summarize_results.py
+```infer
+bash wifi.sh
 ```
 
 ## Results
