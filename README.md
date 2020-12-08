@@ -5,7 +5,7 @@ reproduce the experiments in our NeurIPS2020 paper [Domain Adaptation as a Probl
 
 # Main code
 * ./code: DA on the learned augmented DAG. Experiments on the wifi localization data.
-* ./code_digits: DA on the digit datasets using the causal graph y->X. 
+* ./code_digits: DA on the digit datasets using the causal graph y->x. 
 
 # Citation
 
