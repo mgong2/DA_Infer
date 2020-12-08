@@ -281,11 +281,11 @@ def prepare_parser():
         help='Use a hash of the experiment name instead of the full config '
              '(default: %(default)s)')
     parser.add_argument(
-        '--base_root', type=str, default='../Biggan_result',
+        '--base_root', type=str, default='../data',
         help='Default location to store all weights, samples, data, and logs '
              ' (default: %(default)s)')
     parser.add_argument(
-        '--data_root', type=str, default='data',
+        '--data_root', type=str, default='digits',
         help='Default location where data is stored (default: %(default)s)')
     parser.add_argument(
         '--weights_root', type=str, default='weights',
