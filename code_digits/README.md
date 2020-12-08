@@ -11,13 +11,7 @@ Python 3.7
 Pytorch >= 1.0.0
 
 * Data Preparation
-Downloading address: [MNIST](http://yann.lecun.com/exdb/mnist/index.html) [SVHN](http://ufldl.stanford.edu/housenumbers/) [MNIST\_M](http://yaroslav.ganin.net/) [SythDigits](http://yaroslav.ganin.net/)
-Please download the datasets and do preprocessing using following step.
-
-1. Download the official dataset.
-2. Extract the images and labels from the training split and the testing split. Resize the images to be [3,32,32] (channel, length, width). For Mnist, stack the images in the channel dimension three times.
-
-(All of the images are keeping the same size and without any augmentation.)
+Please download the datasets [here](https://drive.google.com/open?id=1yneOon1U5U8FjZNMXKUTtH6V5kp7DKAo). Put the data in the ../data folder.
 
 ## Training
 
