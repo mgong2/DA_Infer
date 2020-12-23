@@ -8,7 +8,7 @@ CUDA_VISIBLE_DEVICES=0,1 python train.py \
 --shuffle --batch_size 200 \
 --num_G_accumulations 1 --num_D_accumulations 1 --num_epochs 1000 \
 --num_D_steps 4 --num_G_steps 1 --G_lr 2e-4 --D_lr 2e-4 \
---source_dataset svhn,mnist_m,mnist,syn_digits --target_dataset svhn --num_workers 16 \
+--source_dataset mnist,mnist_m,svhn,syn_digits --target_dataset mnist --num_workers 16 \
 --G_ortho 0.0 \
 --G_attn 0 --D_attn 0 --G_ch 64 --D_ch 64 \
 --G_init N02 --D_init N02 \

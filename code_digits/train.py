@@ -280,8 +280,8 @@ def run(config):
 
   transforms_train = transforms.Compose([transforms.Resize(config['resolution']),transforms.ToTensor(),transforms.Normalize([0.5], [0.5])])
 
-  data_set = source_domain_numpy(root=os.path.join(config['base_root'],config['data_root']),
-                                 root_list=config['source_dataset'], transform=transforms_train)
+  print(config['base_root'])
+  data_set = source_domain_numpy(root=config['base_root'], root_list=config['source_dataset'], transform=transforms_train)
   # loaders = utils.get_data_loaders(**{**config, 'batch_size': D_batch_size,
   #                                     'start_itr': state_dict['itr']})
   loaders = torch.utils.data.DataLoader(data_set, batch_size=D_batch_size, shuffle=True,
@@ -289,14 +289,14 @@ def run(config):
            pin_memory=True,
            worker_init_fn=np.random.seed,drop_last=True)
 
-  test_set_s = domain_test_numpy(root=os.path.join(config['base_root'], config['data_root']),
+  test_set_s = domain_test_numpy(root= config['base_root'],
                                root_t=config['target_dataset'], transform=transforms_train)
   test_loader_s = torch.utils.data.DataLoader(test_set_s, batch_size=D_batch_size, shuffle=False,
                                             num_workers=config['num_workers'],
                                             pin_memory=True,
                                             worker_init_fn=np.random.seed, drop_last=True)
 
-  test_set_t = domain_test_numpy(root=os.path.join(config['base_root'],config['data_root']),root_t=config['target_dataset'],transform=transforms_train)
+  test_set_t = domain_test_numpy(root= config['base_root'],root_t=config['target_dataset'],transform=transforms_train)
   test_loader_t = torch.utils.data.DataLoader(test_set_t, batch_size=D_batch_size, shuffle=False,
            num_workers=config['num_workers'],
            pin_memory=True,
